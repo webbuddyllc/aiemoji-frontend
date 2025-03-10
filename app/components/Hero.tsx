@@ -1,17 +1,243 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import './hero.css'; // We'll create this file next
+import { useUser } from '../context/UserContext';
 
 const Hero: React.FC = () => {
   const [mounted, setMounted] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const [emojis, setEmojis] = useState<string[]>([]);
+  const { isAuthenticated } = useUser();
+
+  const handleSubmit = async () => {
+    if (!inputText.trim()) return;
+    
+    // For now, we'll use placeholder emojis. In a real app, this would come from your API
+    const placeholderEmojis = ['😊', '🎨', '✨', '🎭', '🌟'];
+    setEmojis(placeholderEmojis);
+    setInputText('');
+  };
+
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  if (isAuthenticated) {
+    return (
+      <div className="relative min-h-screen bg-black">
+        {/* Enhanced background with space theme */}
+        <div className="absolute inset-0">
+          {/* Radial gradient base */}
+          <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
+          
+          {/* Dark texture overlay */}
+          <div className="absolute inset-0 opacity-30 bg-[url('/noise-texture.png')] mix-blend-overlay"></div>
+          
+          {/* Grid overlay */}
+          <div className="absolute inset-0 z-0 grid-animation">
+            <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
+          </div>
+          
+          {/* Light streaks */}
+          <div className="absolute inset-0">
+            <div className="light-streak light-streak-1 opacity-30"></div>
+            <div className="light-streak light-streak-2 opacity-30"></div>
+            <div className="light-streak light-streak-3 opacity-30"></div>
+          </div>
+          
+          {/* Floating particles */}
+          <div className="absolute inset-0 z-0">
+            <div className="particle particle-1"></div>
+            <div className="particle particle-2"></div>
+            <div className="particle particle-3"></div>
+            <div className="particle particle-4"></div>
+            <div className="particle particle-5"></div>
+            <div className="particle particle-6"></div>
+          </div>
+          
+          {/* Animated gradient glow */}
+          <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[50%] bg-gradient-to-br from-blue-900/10 via-blue-700/5 to-transparent rounded-full blur-3xl animate-glow-slow"></div>
+          <div className="absolute top-[60%] -right-[20%] w-[60%] h-[40%] bg-gradient-to-br from-indigo-900/10 via-blue-800/5 to-transparent rounded-full blur-3xl animate-glow-slow-reverse"></div>
+        </div>
+
+        <div className="relative z-10 pt-24 pb-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            {/* Main Title with enhanced animation */}
+            <div className="text-center mb-8 opacity-0 animate-[fadeIn_1s_ease-out_forwards]">
+              <h1 className="text-center text-6xl md:text-7xl font-bold tracking-tight">
+                <span className="text-white">AI</span>
+                <span className="text-[#ff6b2b] inline-block hover:scale-110 transition-transform duration-200">E</span>
+                <span className="text-[#ff69b4] inline-block hover:scale-110 transition-transform duration-200">moji</span>
+                <span className="text-[#ff69b4] inline-block hover:scale-110 transition-transform duration-200">s</span>
+                <span className="text-white"> Generator</span>
+              </h1>
+              <div className="mt-2 text-3xl md:text-4xl font-bold">
+                <span className="text-white">made </span>
+                <span className="text-gray-500 line-through">for</span>
+                <span className="text-white"> by you</span>
+              </div>
+            </div>
+
+            {/* Character Showcase with enhanced animation */}
+            <div className="relative mb-16 opacity-0 animate-[fadeIn_1s_ease-out_0.3s_forwards]">
+              <div className="relative group max-w-4xl mx-auto">
+                {/* Decorative elements */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+                
+                {/* Main image container with enhanced glass effect */}
+                <div className="relative bg-black/40 rounded-2xl p-1 backdrop-blur-xl border border-blue-500/20">
+                  <div className="absolute inset-0 bg-gradient-radial from-blue-500/10 via-transparent to-transparent blur-xl"></div>
+                  <Image
+                    src="/hero.webp"
+                    alt="AI Generated Characters"
+                    width={1200}
+                    height={400}
+                    className="w-full h-auto mx-auto rounded-xl transform transition duration-500
+                             group-hover:scale-[1.01]"
+                    priority
+                    quality={100}
+                  />
+                  
+                  {/* Corner accents */}
+                  <div className="absolute top-0 right-0 w-20 h-20 border-t-2 border-r-2 border-blue-500/20 rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-20 h-20 border-b-2 border-l-2 border-blue-500/20 rounded-bl-lg"></div>
+                  
+                  {/* Decorative dots */}
+                  <div className="absolute top-4 left-4 w-2 h-2 rounded-full bg-blue-500/40 animate-pulse"></div>
+                  <div className="absolute bottom-4 right-4 w-2 h-2 rounded-full bg-blue-400/40 animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                </div>
+
+                {/* Floating elements */}
+                <div className="absolute -top-6 left-8 px-4 py-2 bg-black/60 rounded-full shadow-xl backdrop-blur-xl
+                              transform -translate-y-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-0
+                              transition-all duration-500 border border-blue-500/20">
+                  <span className="text-sm font-medium bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
+                    ✨ AI Powered
+                  </span>
+                </div>
+                <div className="absolute -bottom-6 right-8 px-4 py-2 bg-black/60 rounded-full shadow-xl backdrop-blur-xl
+                              transform translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0
+                              transition-all duration-500 delay-100 border border-blue-500/20">
+                  <span className="text-sm font-medium bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
+                    🎨 Unlimited Styles
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Section with enhanced animation */}
+            <div className="relative max-w-2xl mx-auto opacity-0 animate-[fadeIn_1s_ease-out_0.6s_forwards]">
+              <div className="relative group">
+                {/* Search input with enhanced styling */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-blue-400 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="I want a cat with hat"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full px-8 py-6 text-lg bg-black/40 rounded-xl
+                             text-white placeholder-gray-400
+                             focus:outline-none
+                             shadow-lg border border-blue-500/20
+                             transition-all duration-300 backdrop-blur-xl
+                             group-hover:shadow-xl group-hover:border-blue-500/30"
+                  />
+                  {/* Animated cursor indicator */}
+                  <div className="absolute right-20 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                  {/* Submit button with hover effect */}
+                  <button 
+                    onClick={handleSubmit}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 
+                             bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400
+                             rounded-xl transition-all duration-300
+                             flex items-center justify-center group/btn
+                             hover:scale-105 hover:shadow-lg shadow-blue-500/20"
+                  >
+                    <svg 
+                      className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Search suggestions */}
+                <div className="absolute left-0 right-0 top-full mt-4 bg-black/60 rounded-xl 
+                              shadow-lg border border-blue-500/20 backdrop-blur-xl
+                              opacity-0 translate-y-2 pointer-events-none
+                              group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto
+                              transition-all duration-300 z-10">
+                  <div className="p-2">
+                    <div className="text-xs text-gray-400 px-2 py-1 font-medium">Popular searches</div>
+                    <button className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors">
+                      🧙‍♂️ Wizard cat with magical powers
+                    </button>
+                    <button className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors">
+                      🏴‍☠️ Pirate penguin with eye patch
+                    </button>
+                    <button className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors">
+                      🎩 Gentleman fox with top hat
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Suggestions */}
+              <div className="flex items-center justify-center flex-wrap gap-2 mt-8 w-full">
+                {[
+                  "Penguin Wizard",
+                  "Cat wearing sunglasses",
+                  "Cupcake with pink icing",
+                  "Shark with a top hat"
+                ].map((suggestion, index) => (
+                  <button
+                    key={index}
+                    className="px-4 py-2 bg-black/40 rounded-full text-sm font-medium
+                             text-gray-300 border border-blue-500/20 backdrop-blur-xl
+                             hover:bg-blue-500/10 hover:scale-105 hover:shadow-md hover:shadow-blue-500/20
+                             transition-all duration-300 ease-out"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+
+              {/* Emoji Display Section */}
+              {emojis.length > 0 && (
+                <div className="mt-8 flex items-center justify-center gap-6 animate-[fadeIn_0.5s_ease-out]">
+                  {emojis.map((emoji, index) => (
+                    <div
+                      key={index}
+                      className="text-4xl transform hover:scale-125 transition-transform duration-300 cursor-pointer"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      {emoji}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Original Hero component for non-authenticated users
   return (
     <div className="relative">
       <section className="w-full flex flex-col items-center justify-start pt-28 pb-16 px-4 relative overflow-hidden bg-black">
@@ -270,7 +496,7 @@ const Hero: React.FC = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-xl flex items-center justify-center mb-6 border border-blue-500/20 backdrop-blur-sm relative">
                   <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
                   <span className="absolute -top-3 -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-blue-400 text-sm text-white">1</span>
-                  <svg className="w-10 h-10 text-blue-400 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </div>
@@ -290,7 +516,7 @@ const Hero: React.FC = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-blue-400/10 to-cyan-400/10 rounded-xl flex items-center justify-center mb-6 border border-blue-400/20 backdrop-blur-sm relative">
                   <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
                   <span className="absolute -top-3 -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 text-sm text-white">2</span>
-                  <svg className="w-10 h-10 text-cyan-400 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
@@ -310,7 +536,7 @@ const Hero: React.FC = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 rounded-xl flex items-center justify-center mb-6 border border-cyan-400/20 backdrop-blur-sm relative">
                   <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
                   <span className="absolute -top-3 -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-sm text-white">3</span>
-                  <svg className="w-10 h-10 text-cyan-400 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                 </div>
@@ -368,7 +594,7 @@ const Hero: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-gradient-to-r from-blue-500/5 to-blue-400/5 rounded-xl p-8 border border-blue-500/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105">
               <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-400 rounded-lg mb-6 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
                 </svg>
               </div>
@@ -378,7 +604,7 @@ const Hero: React.FC = () => {
 
             <div className="bg-gradient-to-r from-blue-400/5 to-cyan-400/5 rounded-xl p-8 border border-blue-400/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105">
               <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-lg mb-6 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
@@ -388,7 +614,7 @@ const Hero: React.FC = () => {
 
             <div className="bg-gradient-to-r from-cyan-400/5 to-blue-500/5 rounded-xl p-8 border border-cyan-400/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105">
               <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg mb-6 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -478,16 +704,16 @@ const Hero: React.FC = () => {
                   <circle cx="16" cy="16" r="14" fill="url(#emojiGradient)" />
                   
                   {/* Smile curve */}
-                  <path d="M10 18C10 18 12 22 16 22C20 22 22 18 22 18" stroke="white" stroke-width="2" stroke-linecap="round" />
+                  <path d="M10 18C10 18 12 22 16 22C20 22 22 18 22 18" stroke="white" strokeWidth="2" strokeLinecap="round" />
                   
                   {/* Eyes */}
                   <circle cx="11" cy="13" r="2" fill="white" />
                   <circle cx="21" cy="13" r="2" fill="white" />
                   
                   {/* AI circuit patterns */}
-                  <path d="M4 16C4 16 8 10 16 10C24 10 28 16 28 16" stroke="#4299E1" stroke-width="1" stroke-opacity="0.5" stroke-dasharray="2 2" />
-                  <path d="M5 10L8 7" stroke="#4299E1" stroke-width="1" stroke-opacity="0.7" />
-                  <path d="M27 10L24 7" stroke="#4299E1" stroke-width="1" stroke-opacity="0.7" />
+                  <path d="M4 16C4 16 8 10 16 10C24 10 28 16 28 16" stroke="#4299E1" strokeWidth="1" strokeOpacity="0.5" strokeDasharray="2 2" />
+                  <path d="M5 10L8 7" stroke="#4299E1" strokeWidth="1" strokeOpacity="0.7" />
+                  <path d="M27 10L24 7" stroke="#4299E1" strokeWidth="1" strokeOpacity="0.7" />
                   
                   {/* Small sparkle elements */}
                   <circle cx="27" cy="16" r="1" fill="#FFD700" />
@@ -496,8 +722,8 @@ const Hero: React.FC = () => {
                   {/* Gradient definition */}
                   <defs>
                     <linearGradient id="emojiGradient" x1="2" y1="2" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stop-color="#3182CE" />
-                      <stop offset="100%" stop-color="#1A365D" />
+                      <stop offset="0%" stopColor="#3182CE" />
+                      <stop offset="100%" stopColor="#1A365D" />
                     </linearGradient>
                   </defs>
                 </svg>

@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useUser } from '../context/UserContext';
 
 interface AuthModalsProps {
   isOpen: boolean;
@@ -10,6 +12,42 @@ interface AuthModalsProps {
 
 const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const { setUser } = useUser();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      // This is a mock authentication - replace with your actual auth logic
+      const mockUser = {
+        id: '1',
+        name: isLogin ? 'John Doe' : name,
+        email: email,
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + email
+      };
+
+      // Store user in localStorage and context
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      
+      // Close modal and redirect
+      onClose();
+      router.push('/dashboard');
+    } catch (err) {
+      setError('Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.95 },
@@ -81,14 +119,17 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose }) => {
                 </p>
 
                 {/* Form */}
-                <form className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   {!isLogin && (
                     <div>
                       <label className="block text-gray-300 text-sm font-medium mb-2">Name</label>
                       <input
                         type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
                         placeholder="Enter your name"
+                        required
                       />
                     </div>
                   )}
@@ -96,28 +137,41 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose }) => {
                     <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
                     <input
                       type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
                       placeholder="Enter your email"
+                      required
                     />
                   </div>
                   <div>
                     <label className="block text-gray-300 text-sm font-medium mb-2">Password</label>
                     <input
                       type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
                       placeholder="Enter your password"
+                      required
                     />
                   </div>
+
+                  {error && (
+                    <div className="text-red-500 text-sm text-center">{error}</div>
+                  )}
 
                   {/* Submit Button */}
                   <button
                     type="submit"
+                    disabled={loading}
                     className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 hover:from-blue-600 hover:via-blue-500 hover:to-cyan-500
                     text-white font-medium rounded-lg transition-all duration-300 shadow-lg shadow-blue-500/20
-                    hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 relative group overflow-hidden"
+                    hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 relative group overflow-hidden disabled:opacity-50"
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300 animate-pulse"></span>
-                    <span className="relative">{isLogin ? 'Login' : 'Sign Up'}</span>
+                    <span className="relative">
+                      {loading ? 'Loading...' : (isLogin ? 'Login' : 'Sign Up')}
+                    </span>
                   </button>
 
                   {/* Social Login */}

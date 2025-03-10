@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AuthModals from './AuthModals';
+import { useUser } from '../context/UserContext';
 
 const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useUser();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -20,6 +23,11 @@ const Navbar: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [scrolled]);
+
+  const handleLogout = () => {
+    logout();
+    setIsProfileMenuOpen(false);
+  };
   
   return (
     <>
@@ -82,49 +90,100 @@ const Navbar: React.FC = () => {
                 </span>
               </Link>
               
-              {/* Create Button */}
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 
-                text-white font-medium rounded-md transition-all duration-200 shadow-lg shadow-blue-600/30
-                hover:shadow-blue-600/50 hover:-translate-y-0.5"
-              >
-                {/* Custom Magic Wand Icon */}
-                <svg 
-                  width="20" 
-                  height="20" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-white"
+              {/* Create Button or Profile */}
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors relative group"
+                  >
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-blue-500/20 group-hover:border-blue-500/40 transition-colors">
+                      <Image
+                        src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
+                        alt="Profile"
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <svg 
+                      className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Profile Dropdown */}
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-lg bg-black/90 border border-blue-500/20 shadow-lg backdrop-blur-xl py-1">
+                      <div className="px-4 py-2 border-b border-blue-500/10">
+                        <p className="text-sm text-white font-medium">{user?.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-500/10 hover:text-white transition-colors"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-500/10 hover:text-white transition-colors"
+                      >
+                        Settings
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 
+                  text-white font-medium rounded-md transition-all duration-200 shadow-lg shadow-blue-600/30
+                  hover:shadow-blue-600/50 hover:-translate-y-0.5"
                 >
-                  {/* Wand */}
-                  <path 
-                    d="M20 4L8.5 15.5M8.5 15.5L10 19L4 20L5 14L8.5 15.5Z" 
-                    stroke="currentColor" 
-                    strokeWidth="1.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                  
-                  {/* Stars/Sparkles */}
-                  <path 
-                    d="M15 4L16 2L17 4L19 5L17 6L16 8L15 6L13 5L15 4Z" 
-                    fill="#FFD300" 
-                    stroke="white" 
-                    strokeWidth="0.2"
-                  />
-                  
-                  <path 
-                    d="M19 9L19.5 8L20 9L21 9.5L20 10L19.5 11L19 10L18 9.5L19 9Z" 
-                    fill="#FFD300" 
-                    stroke="white" 
-                    strokeWidth="0.2"
-                  />
-                </svg>
-                <span>Create</span>
-              </button>
+                  {/* Custom Magic Wand Icon */}
+                  <svg 
+                    width="20" 
+                    height="20" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-white"
+                  >
+                    <path 
+                      d="M20 4L8.5 15.5M8.5 15.5L10 19L4 20L5 14L8.5 15.5Z" 
+                      stroke="currentColor" 
+                      strokeWidth="1.5" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                    <path 
+                      d="M15 4L16 2L17 4L19 5L17 6L16 8L15 6L13 5L15 4Z" 
+                      fill="#FFD300" 
+                      stroke="white" 
+                      strokeWidth="0.2"
+                    />
+                    <path 
+                      d="M19 9L19.5 8L20 9L21 9.5L20 10L19.5 11L19 10L18 9.5L19 9Z" 
+                      fill="#FFD300" 
+                      stroke="white" 
+                      strokeWidth="0.2"
+                    />
+                  </svg>
+                  <span>Create</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
