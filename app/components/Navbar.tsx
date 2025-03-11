@@ -6,6 +6,26 @@ import Image from 'next/image';
 import AuthModals from './AuthModals';
 import { useUser } from '../context/UserContext';
 
+const EMOJI_LIST = [
+  { emoji: '😊', gradient: ['from-yellow-400', 'to-orange-400'] },
+  { emoji: '🚀', gradient: ['from-blue-400', 'to-indigo-400'] },
+  { emoji: '🌟', gradient: ['from-yellow-300', 'to-amber-400'] },
+  { emoji: '🎨', gradient: ['from-pink-400', 'to-rose-400'] },
+  { emoji: '🎮', gradient: ['from-purple-400', 'to-indigo-400'] },
+  { emoji: '🎵', gradient: ['from-green-400', 'to-emerald-400'] },
+  { emoji: '🌈', gradient: ['from-red-400', 'via-yellow-400', 'to-green-400'] },
+  { emoji: '💡', gradient: ['from-amber-300', 'to-orange-400'] },
+  { emoji: '🎯', gradient: ['from-red-400', 'to-rose-400'] },
+  { emoji: '🌺', gradient: ['from-pink-400', 'to-rose-300'] },
+];
+
+const getEmojiForUser = (email: string) => {
+  // Generate a consistent index based on email
+  const charSum = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const index = charSum % EMOJI_LIST.length;
+  return EMOJI_LIST[index];
+};
+
 const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -28,7 +48,10 @@ const Navbar: React.FC = () => {
     logout();
     setIsProfileMenuOpen(false);
   };
-  
+
+  // Get emoji based on user's email
+  const userEmoji = user?.email ? getEmojiForUser(user.email) : EMOJI_LIST[0];
+
   return (
     <>
       <nav className="fixed top-5 left-0 right-0 z-50 px-4 pointer-events-none">
@@ -97,14 +120,21 @@ const Navbar: React.FC = () => {
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors relative group"
                   >
-                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-blue-500/20 group-hover:border-blue-500/40 transition-colors">
-                      <Image
-                        src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
-                        alt="Profile"
-                        width={32}
-                        height={32}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className={`w-8 h-8 rounded-full overflow-hidden border-2 border-blue-500/20 group-hover:border-blue-500/40 transition-all duration-300 relative bg-gradient-to-br ${userEmoji.gradient.join(' ')}`}>
+                      {/* Emoji Placeholder */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xl transform group-hover:scale-110 transition-transform duration-300" style={{ lineHeight: 1 }}>
+                          {userEmoji.emoji}
+                        </span>
+                      </div>
+                      {/* Sparkle Effects */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute top-0 left-1 w-1 h-1 bg-white rounded-full animate-ping"></div>
+                        <div className="absolute bottom-1 right-0 w-1 h-1 bg-white rounded-full animate-ping" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="absolute top-1 right-1 w-1 h-1 bg-white rounded-full animate-ping" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
                     </div>
                     <svg 
                       className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`}
@@ -123,12 +153,6 @@ const Navbar: React.FC = () => {
                         <p className="text-sm text-white font-medium">{user?.name}</p>
                         <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                       </div>
-                      <Link
-                        href="/dashboard"
-                        className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-500/10 hover:text-white transition-colors"
-                      >
-                        Dashboard
-                      </Link>
                       <Link
                         href="/settings"
                         className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-500/10 hover:text-white transition-colors"

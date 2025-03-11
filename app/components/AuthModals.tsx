@@ -27,23 +27,43 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      // This is a mock authentication - replace with your actual auth logic
-      const mockUser = {
-        id: '1',
-        name: isLogin ? 'John Doe' : name,
-        email: email,
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + email
-      };
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+
+      if (!isLogin && !name) {
+        throw new Error('Name is required for registration');
+      }
+
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          isLogin,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed');
+      }
 
       // Store user in localStorage and context
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
       
       // Close modal and redirect
       onClose();
-      router.push('/dashboard');
+      router.push('/');
     } catch (err) {
-      setError('Authentication failed. Please try again.');
+      console.error('Auth error:', err);
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }

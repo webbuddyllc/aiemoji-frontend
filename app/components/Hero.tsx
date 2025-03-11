@@ -5,25 +5,57 @@ import Link from 'next/link';
 import Image from 'next/image';
 import './hero.css'; // We'll create this file next
 import { useUser } from '../context/UserContext';
+import { generateEmoji } from '../services/emojiService';
+import { toast } from 'react-hot-toast';
+import AuthModals from './AuthModals';
 
 const Hero: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [inputText, setInputText] = useState('');
   const [emojis, setEmojis] = useState<string[]>([]);
   const { isAuthenticated } = useUser();
+  const [emojiPrompt, setEmojiPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [generatedEmojis, setGeneratedEmojis] = useState<string[]>([]);
 
-  const handleSubmit = async () => {
-    if (!inputText.trim()) return;
-    
-    // For now, we'll use placeholder emojis. In a real app, this would come from your API
-    const placeholderEmojis = ['😊', '🎨', '✨', '🎭', '🌟'];
-    setEmojis(placeholderEmojis);
-    setInputText('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) {
+      toast.error('Please enter what type of emoji you want to generate');
+      return;
+    }
+
+    setLoading(true);
+    const loadingToast = toast.loading('Generating your emojis...');
+
+    try {
+      const response = await generateEmoji(inputText.trim());
+      
+      if (response.success && response.emojis && response.emojis.length > 0) {
+        setGeneratedEmojis(response.emojis.map(e => e.emoji));
+        toast.success('Emojis generated successfully!', {
+          id: loadingToast,
+        });
+      } else {
+        throw new Error(response.error || 'Failed to generate emojis');
+      }
+    } catch (error) {
+      console.error('[tf7udl] Error in generateEmoji:', error);
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to generate emojis. Please try again.',
+        { id: loadingToast }
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSubmit();
+      handleSubmit(e);
     }
   };
 
@@ -145,33 +177,39 @@ const Hero: React.FC = () => {
                     placeholder="I want a cat with hat"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
                     className="w-full px-8 py-6 text-lg bg-black/40 rounded-xl
                              text-white placeholder-gray-400
                              focus:outline-none
                              shadow-lg border border-blue-500/20
                              transition-all duration-300 backdrop-blur-xl
                              group-hover:shadow-xl group-hover:border-blue-500/30"
+                    disabled={loading}
                   />
                   {/* Animated cursor indicator */}
                   <div className="absolute right-20 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
                   {/* Submit button with hover effect */}
                   <button 
                     onClick={handleSubmit}
+                    disabled={loading}
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 
                              bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400
                              rounded-xl transition-all duration-300
                              flex items-center justify-center group/btn
                              hover:scale-105 hover:shadow-lg shadow-blue-500/20"
                   >
-                    <svg 
-                      className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    {loading ? (
+                      <span className="animate-spin">⚡</span>
+                    ) : (
+                      <svg 
+                        className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </button>
                 </div>
 
@@ -216,16 +254,19 @@ const Hero: React.FC = () => {
                 ))}
               </div>
 
-              {/* Emoji Display Section */}
-              {emojis.length > 0 && (
-                <div className="mt-8 flex items-center justify-center gap-6 animate-[fadeIn_0.5s_ease-out]">
-                  {emojis.map((emoji, index) => (
-                    <div
-                      key={index}
-                      className="text-4xl transform hover:scale-125 transition-transform duration-300 cursor-pointer"
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      {emoji}
+              {/* Generated Emojis Display */}
+              {generatedEmojis.length > 0 && (
+                <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {generatedEmojis.map((emojiUrl, index) => (
+                    <div key={index} className="relative group">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur opacity-50 group-hover:opacity-75 transition-all duration-200"></div>
+                      <div className="relative bg-black rounded-2xl p-2">
+                        <img
+                          src={emojiUrl}
+                          alt={`Generated Emoji ${index + 1}`}
+                          className="w-full h-48 object-contain rounded-xl"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
