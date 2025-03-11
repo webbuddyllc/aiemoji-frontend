@@ -1,4 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const REPLICATE_API_URL = 'https://api.replicate.com/v1/predictions';
+const REPLICATE_MODEL_VERSION = '5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa';
 
 export interface EmojiStyle {
   background: string;
@@ -7,30 +9,40 @@ export interface EmojiStyle {
 
 export interface StyledEmoji {
   emoji: string;
-  style: EmojiStyle;
+  isImage?: boolean;
+  metadata?: EmojiMetadata;
 }
 
 export interface EmojiMetadata {
-  requestId: string;
-  matchedWords: string[];
-  totalMatches: number;
-  uniqueMatches: number;
-  processedAt: string;
+  prompt: string;
+  dimensions: string;
+  model: string;
+  date: string;
 }
 
 export interface EmojiResponse {
   success: boolean;
-  emojis?: StyledEmoji[];
+  emoji?: StyledEmoji;
   prompt?: string;
   error?: string;
   errorType?: string;
   details?: any;
-  metadata?: EmojiMetadata;
+  metadata?: {
+    requestId: string;
+    processedAt: string;
+  };
   clientMetadata?: {
     clientRequestId: string;
     responseTime: number;
   };
 }
+
+// Predefined emoji styles for styling generated emojis
+const EMOJI_STYLES = [
+  { background: 'linear-gradient(135deg, #FF6B6B, #FFE66D)', textShadow: '2px 2px 4px rgba(0,0,0,0.2)' },
+  { background: 'linear-gradient(135deg, #4ECDC4, #556270)', textShadow: '2px 2px 4px rgba(0,0,0,0.2)' },
+  { background: 'linear-gradient(135deg, #9B59B6, #3498DB)', textShadow: '2px 2px 4px rgba(0,0,0,0.2)' },
+];
 
 // Custom error class for emoji generation
 class EmojiGenerationError extends Error {
@@ -59,7 +71,7 @@ export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
         errorType: 'INVALID_INPUT',
         details: { receivedType: typeof text },
         metadata: {
-          clientRequestId,
+          requestId: clientRequestId,
           processedAt: new Date().toISOString()
         }
       };
@@ -73,72 +85,114 @@ export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
         errorType: 'INVALID_INPUT',
         details: { maxLength: 100, actualLength: text.length },
         metadata: {
-          clientRequestId,
+          requestId: clientRequestId,
           processedAt: new Date().toISOString()
         }
       };
     }
 
-    console.log(`[${clientRequestId}] Calling API:`, `${API_URL}/emoji/generate`);
-    console.log(`[${clientRequestId}] Request payload:`, { text });
+    console.log(`[${clientRequestId}] Processing text prompt:`, text);
 
+    // Call the backend API to generate emojis with Replicate
+    console.log(`[${clientRequestId}] Calling backend API for Replicate emoji generation:`, `${API_URL}/emoji/generate`);
+    
+    // Log the request we're about to make
+    console.log(`[${clientRequestId}] Request details:`, {
+      url: `${API_URL}/emoji/generate`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Client-Request-ID': clientRequestId,
+      },
+      body: { text },
+      mode: 'cors'
+    });
+    
     const startTime = Date.now();
     
-    try {
-      const response = await fetch(`${API_URL}/emoji/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Client-Request-ID': clientRequestId,
-        },
-        body: JSON.stringify({ text }),
-        credentials: 'include',
-        mode: 'cors',
-      });
+    const response = await fetch(`${API_URL}/emoji/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Client-Request-ID': clientRequestId,
+      },
+      body: JSON.stringify({ text }),
+      credentials: 'include',
+      mode: 'cors'
+    });
 
-      const responseTime = Date.now() - startTime;
-      console.log(`[${clientRequestId}] API response time:`, responseTime + 'ms');
+    const responseTime = Date.now() - startTime;
+    console.log(`[${clientRequestId}] Backend API response time:`, responseTime + 'ms');
+    console.log(`[${clientRequestId}] Backend API response status:`, response.status);
+    console.log(`[${clientRequestId}] Backend API response headers:`, Object.fromEntries([...response.headers.entries()]));
 
-      const data = await response.json();
-      console.log(`[${clientRequestId}] API Response:`, {
-        success: data.success,
-        emojiCount: data.emojis?.length,
-        metadata: data.metadata,
-      });
-
-      if (!response.ok) {
+    // Process the response
+    if (!response.ok) {
+      try {
+        const errorData = await response.json();
+        console.error(`[${clientRequestId}] Backend API error response:`, errorData);
+        
         return {
           success: false,
-          error: data.error || `HTTP error! status: ${response.status}`,
-          errorType: data.errorType || 'API_ERROR',
+          error: errorData.error || `HTTP error! status: ${response.status}`,
+          errorType: errorData.errorType || 'API_ERROR',
           details: {
             status: response.status,
             statusText: response.statusText,
-            ...data.details
+            ...errorData.details
           },
           metadata: {
-            ...data.metadata,
-            clientRequestId,
+            ...errorData.metadata,
+            requestId: clientRequestId,
+            processedAt: new Date().toISOString()
+          }
+        };
+      } catch (parseError) {
+        // If we can't parse the error, return a generic error
+        console.error(`[${clientRequestId}] Error parsing error response:`, parseError);
+        
+        return {
+          success: false,
+          error: `Backend error: ${response.status} ${response.statusText}`,
+          errorType: 'API_ERROR',
+          details: {
+            status: response.status,
+            statusText: response.statusText
+          },
+          metadata: {
+            requestId: clientRequestId,
             processedAt: new Date().toISOString()
           }
         };
       }
+    }
 
-      if (!data.success || !data.emojis || data.emojis.length === 0) {
+    // Parse successful response
+    try {
+      const data = await response.json();
+      console.log(`[${clientRequestId}] Backend API successful response:`, {
+        success: data.success,
+        emoji: data.emoji,
+        metadata: data.metadata,
+      });
+
+      if (!data.success || !data.emoji) {
         return {
           success: false,
-          error: data.error || 'No emojis generated',
+          error: data.error || 'No emoji was generated',
           errorType: data.errorType || 'PROCESSING_ERROR',
           details: data.details || {},
           metadata: {
             ...data.metadata,
-            clientRequestId,
+            requestId: clientRequestId,
             processedAt: new Date().toISOString()
           }
         };
       }
 
+      // Return the successful response
       return {
         ...data,
         clientMetadata: {
@@ -146,26 +200,26 @@ export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
           responseTime,
         }
       };
-
-    } catch (fetchError) {
-      console.error(`[${clientRequestId}] Fetch error:`, fetchError);
+    } catch (jsonError) {
+      console.error(`[${clientRequestId}] Error parsing JSON response:`, jsonError);
+      
       return {
         success: false,
-        error: 'Cannot connect to the server',
-        errorType: 'CONNECTION_ERROR',
+        error: 'Failed to parse backend response',
+        errorType: 'PARSING_ERROR',
         details: {
-          message: 'Please make sure the backend is running',
-          originalError: fetchError instanceof Error ? fetchError.message : 'Unknown error'
+          message: jsonError instanceof Error ? jsonError.message : 'Unknown error',
+          originalError: jsonError
         },
         metadata: {
-          clientRequestId,
+          requestId: clientRequestId,
           processedAt: new Date().toISOString()
         }
       };
     }
-
   } catch (error) {
     console.error(`[${clientRequestId}] Unexpected error:`, error);
+    
     return {
       success: false,
       error: 'An unexpected error occurred',
@@ -175,7 +229,7 @@ export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
         stack: error instanceof Error ? error.stack : undefined,
       },
       metadata: {
-        clientRequestId,
+        requestId: clientRequestId,
         processedAt: new Date().toISOString()
       }
     };

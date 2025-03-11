@@ -1,13 +1,26 @@
 import { Request, Response } from 'express';
+import axios from 'axios';
+import dotenv from 'dotenv';
+import Replicate from 'replicate';
 
-// Predefined emoji combinations with styles
+dotenv.config();
+
+// Predefined emoji styles for styling generated emojis
 const EMOJI_STYLES = [
   { background: 'linear-gradient(135deg, #FF6B6B, #FFE66D)', textShadow: '2px 2px 4px rgba(0,0,0,0.2)' },
   { background: 'linear-gradient(135deg, #4ECDC4, #556270)', textShadow: '2px 2px 4px rgba(0,0,0,0.2)' },
   { background: 'linear-gradient(135deg, #9B59B6, #3498DB)', textShadow: '2px 2px 4px rgba(0,0,0,0.2)' },
 ];
 
-// Map of keywords to emojis
+// Replicate API configuration
+const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
+const REPLICATE_MODEL_ID = "fofr/sdxl-emoji";
+const REPLICATE_MODEL_VERSION = "dee76b5afde21b0f01ed7925f0665b7e879c50ee718c5f78a9d38e04d523cc5e";
+
+// Emoji prefixes to add to user prompts
+const EMOJI_PREFIXES = ['✨', '🎨', '🌟', '💫', '🔮', '🎭', '🎪', '��', '🎮', '🎲'];
+
+// If no Replicate Key is found, we'll use a fallback mechanism
 const EMOJI_MAP: { [key: string]: string[] } = {
   'happy': ['😊', '😄', '😃'],
   'sad': ['😢', '😭', '😔'],
@@ -27,7 +40,7 @@ const EMOJI_MAP: { [key: string]: string[] } = {
   'study': ['📚', '✏️', '📝'],
   'magic': ['✨', '🌟', '💫'],
   'cat': ['😺', '😸', '😻'],
-  'dog': ['🐕', '🐶', '��'],
+  'dog': ['🐕', '🐶', '🐾'],
   'default': ['🎨', '🎯', '🎪']
 };
 
@@ -37,6 +50,7 @@ enum EmojiErrorType {
   PROCESSING_ERROR = 'PROCESSING_ERROR',
   NO_MATCHES = 'NO_MATCHES',
   EMOJI_VALIDATION_ERROR = 'EMOJI_VALIDATION_ERROR',
+  REPLICATE_API_ERROR = 'REPLICATE_API_ERROR',
   UNKNOWN = 'UNKNOWN'
 }
 
@@ -45,6 +59,64 @@ interface EmojiError {
   message: string;
   details?: any;
 }
+
+// Generate emoji through Replicate API
+const generateEmojiWithReplicate = async (text: string, requestId: string): Promise<string> => {
+  try {
+    console.log(`[${requestId}] Generating emoji with Replicate API for prompt: "${text}"`);
+    
+    if (!REPLICATE_API_KEY) {
+      throw new Error('Replicate API key is not configured');
+    }
+
+    // Select a random emoji prefix to add to the prompt
+    const randomEmojiPrefix = EMOJI_PREFIXES[Math.floor(Math.random() * EMOJI_PREFIXES.length)];
+    const enhancedPrompt = `detailed emoji of ${randomEmojiPrefix} ${text}, high quality, crisp details, 3D style, bright colors, clean background`;
+    console.log(`[${requestId}] Enhanced prompt: "${enhancedPrompt}"`);
+    
+    // Initialize Replicate client
+    const replicate = new Replicate({
+      auth: REPLICATE_API_KEY,
+    });
+
+    console.log(`[${requestId}] Calling Replicate with model: ${REPLICATE_MODEL_ID}`);
+    
+    // Run the model with the enhanced prompt for a single high-quality emoji
+    const output = await replicate.run(
+      `${REPLICATE_MODEL_ID}:${REPLICATE_MODEL_VERSION}`,
+      {
+        input: {
+          width: 768,
+          height: 768, 
+          prompt: enhancedPrompt,
+          refine: "no_refiner",
+          scheduler: "K_EULER",
+          lora_scale: 0.8,
+          num_outputs: 1,
+          guidance_scale: 7.5,
+          apply_watermark: false,
+          high_noise_frac: 0.8,
+          negative_prompt: "bad quality, low resolution, blurry, pixelated",
+          prompt_strength: 0.8,
+          num_inference_steps: 50
+        }
+      }
+    );
+    
+    console.log(`[${requestId}] Replicate output:`, output);
+    
+    // The output should be an array with a single image URL
+    if (Array.isArray(output) && output.length > 0) {
+      return output[0];
+    }
+    
+    throw new Error('Unexpected response format from Replicate');
+    
+  } catch (error) {
+    console.error(`[${requestId}] Error generating emoji with Replicate:`, error);
+    throw error;
+  }
+};
 
 // Validate if a string is a valid emoji
 const isValidEmoji = (str: string): boolean => {
@@ -97,71 +169,52 @@ export const generateEmoji = async (req: Request, res: Response) => {
 
     console.log(`[${requestId}] Processing text prompt:`, text);
 
-    // Convert text to lowercase and split into words
-    const words = text.toLowerCase().split(' ');
-    console.log(`[${requestId}] Parsed words:`, words);
-    
-    // Find matching emojis from our map
-    let selectedEmojis: string[] = [];
-    const matchedWords: string[] = [];
-    
-    // Try to find emojis for each word in the input
-    for (const word of words) {
-      if (EMOJI_MAP[word]) {
-        const validEmojis = validateEmojis(EMOJI_MAP[word]);
-        if (validEmojis.length > 0) {
-          selectedEmojis = selectedEmojis.concat(validEmojis);
-          matchedWords.push(word);
-        }
-      }
-    }
-
-    console.log(`[${requestId}] Matched words:`, matchedWords);
-    console.log(`[${requestId}] Selected emojis before processing:`, selectedEmojis);
-
-    // If no matches found, use default emojis
-    if (selectedEmojis.length === 0) {
-      console.log(`[${requestId}] No matches found, using default emojis`);
-      selectedEmojis = validateEmojis(EMOJI_MAP['default']);
+    // Try to generate emoji with Replicate API
+    let emojiUrl: string;
+    try {
+      emojiUrl = await generateEmojiWithReplicate(text, requestId);
+      console.log(`[${requestId}] Generated emoji URL from Replicate:`, emojiUrl);
+    } catch (replicateError) {
+      console.error(`[${requestId}] Replicate API error:`, replicateError);
       
-      // If default emojis are invalid, return error
-      if (selectedEmojis.length === 0) {
-        const error: EmojiError = {
-          type: EmojiErrorType.EMOJI_VALIDATION_ERROR,
-          message: 'Failed to generate valid emojis',
-          details: { reason: 'Default emojis are invalid' }
-        };
-        console.error(`[${requestId}] Emoji validation failed:`, error);
-        return res.status(500).json({
-          success: false,
-          error: error.message,
-          errorType: error.type,
-          details: error.details
-        });
-      }
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate emoji with Replicate API',
+        errorType: EmojiErrorType.REPLICATE_API_ERROR,
+        details: {
+          message: replicateError instanceof Error ? replicateError.message : 'Unknown error occurred',
+          apiKey: REPLICATE_API_KEY ? 'Configured' : 'Missing',
+        }
+      });
     }
 
-    // Take only up to 3 unique emojis
-    const uniqueEmojis = [...new Set(selectedEmojis)].slice(0, 3);
-    console.log(`[${requestId}] Final unique emojis:`, uniqueEmojis);
-
-    // Add random styles to each emoji
-    const emojisWithStyles = uniqueEmojis.map(emoji => {
-      const style = EMOJI_STYLES[Math.floor(Math.random() * EMOJI_STYLES.length)];
-      return { emoji, style };
+    // Get current date for metadata
+    const generatedDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
 
-    console.log(`[${requestId}] Successfully generated styled emojis`);
+    // Format the emoji with metadata similar to the shown image
+    const emojiData = {
+      emoji: emojiUrl,
+      isImage: true,
+      metadata: {
+        prompt: text,
+        dimensions: "768×768",
+        model: "Emoji",
+        date: generatedDate
+      }
+    };
+
+    console.log(`[${requestId}] Successfully generated emoji image`);
 
     return res.status(200).json({
       success: true,
-      emojis: emojisWithStyles,
+      emoji: emojiData,
       prompt: text,
       metadata: {
         requestId,
-        matchedWords,
-        totalMatches: selectedEmojis.length,
-        uniqueMatches: uniqueEmojis.length,
         processedAt: new Date().toISOString()
       }
     });

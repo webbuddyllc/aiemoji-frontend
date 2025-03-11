@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, KeyboardEvent } from 'react';
 import Link from 'next/link';
@@ -17,7 +17,17 @@ const Hero: React.FC = () => {
   const [emojiPrompt, setEmojiPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [generatedEmojis, setGeneratedEmojis] = useState<string[]>([]);
+  const [generatedEmojis, setGeneratedEmojis] = useState<Array<{ url: string; isImage: boolean }>>([]);
+  const [generatedEmoji, setGeneratedEmoji] = useState<{
+    url: string;
+    isImage: boolean;
+    metadata?: {
+      prompt: string;
+      dimensions: string;
+      model: string;
+      date: string;
+    };
+  } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,25 +37,44 @@ const Hero: React.FC = () => {
     }
 
     setLoading(true);
-    const loadingToast = toast.loading('Generating your emojis...');
+    const loadingToast = toast.loading('Generating your emoji...');
 
     try {
+      console.log(`[tf7udl] Generating emoji for prompt: "${inputText.trim()}"`);
       const response = await generateEmoji(inputText.trim());
       
-      if (response.success && response.emojis && response.emojis.length > 0) {
-        setGeneratedEmojis(response.emojis.map(e => e.emoji));
-        toast.success('Emojis generated successfully!', {
+      console.log(`[tf7udl] Emoji generation response:`, {
+        success: response.success,
+        emoji: response.emoji,
+        errorType: response.errorType,
+      });
+      
+      if (response.success && response.emoji) {
+        setGeneratedEmoji({
+          url: response.emoji.emoji,
+          isImage: response.emoji.isImage || false,
+          metadata: response.emoji.metadata
+        });
+        toast.success('Emoji generated successfully!', {
           id: loadingToast,
         });
       } else {
-        throw new Error(response.error || 'Failed to generate emojis');
+        // Handle error from response
+        const errorMessage = response.error || 'Failed to generate emoji';
+        console.error(`[tf7udl] Error in emoji generation:`, {
+          error: errorMessage,
+          type: response.errorType,
+          details: response.details
+        });
+        toast.error(errorMessage, { id: loadingToast });
       }
     } catch (error) {
-      console.error('[tf7udl] Error in generateEmoji:', error);
+      // Handle exception
+      console.error(`[tf7udl] Exception in emoji generation:`, error);
       toast.error(
         error instanceof Error 
           ? error.message 
-          : 'Failed to generate emojis. Please try again.',
+          : 'Failed to generate emoji. Please try again.',
         { id: loadingToast }
       );
     } finally {
@@ -201,14 +230,14 @@ const Hero: React.FC = () => {
                     {loading ? (
                       <span className="animate-spin">⚡</span>
                     ) : (
-                      <svg 
-                        className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                    <svg 
+                      className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                     )}
                   </button>
                 </div>
@@ -221,54 +250,236 @@ const Hero: React.FC = () => {
                               transition-all duration-300 z-10">
                   <div className="p-2">
                     <div className="text-xs text-gray-400 px-2 py-1 font-medium">Popular searches</div>
-                    <button className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors">
-                      🧙‍♂️ Wizard cat with magical powers
+                    <button 
+                      onClick={() => {
+                        setInputText("Wizard cat with magical powers");
+                        const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                        if (inputElement) {
+                          inputElement.focus();
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors flex items-center active:bg-blue-500/20"
+                    >
+                      <span className="mr-2">🧙‍♂️</span> 
+                      <span>Wizard cat with magical powers</span>
+                      <span className="ml-auto text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs">Click to use</span>
                     </button>
-                    <button className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors">
-                      🏴‍☠️ Pirate penguin with eye patch
+                    <button 
+                      onClick={() => {
+                        setInputText("Pirate penguin with eye patch");
+                        const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                        if (inputElement) {
+                          inputElement.focus();
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors flex items-center active:bg-blue-500/20"
+                    >
+                      <span className="mr-2">🏴‍☠️</span>
+                      <span>Pirate penguin with eye patch</span>
+                      <span className="ml-auto text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs">Click to use</span>
                     </button>
-                    <button className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors">
-                      🎩 Gentleman fox with top hat
+                    <button 
+                      onClick={() => {
+                        setInputText("Gentleman fox with top hat");
+                        const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                        if (inputElement) {
+                          inputElement.focus();
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 text-gray-300 hover:bg-blue-500/10 rounded-lg text-sm transition-colors flex items-center active:bg-blue-500/20"
+                    >
+                      <span className="mr-2">🎩</span>
+                      <span>Gentleman fox with top hat</span>
+                      <span className="ml-auto text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs">Click to use</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Suggestions */}
+              {/* Quick Suggestions - Updated with trending options and made clickable */}
               <div className="flex items-center justify-center flex-wrap gap-2 mt-8 w-full">
                 {[
-                  "Penguin Wizard",
-                  "Cat wearing sunglasses",
-                  "Cupcake with pink icing",
-                  "Shark with a top hat"
+                  "Space Astronaut Cat",
+                  "Cyberpunk Robot",
+                  "Magical Unicorn Chef",
+                  "Ninja Panda"
                 ].map((suggestion, index) => (
                   <button
                     key={index}
+                    onClick={() => {
+                      setInputText(suggestion);
+                      // Focus on the input field after setting the text
+                      const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                      if (inputElement) inputElement.focus();
+                    }}
                     className="px-4 py-2 bg-black/40 rounded-full text-sm font-medium
                              text-gray-300 border border-blue-500/20 backdrop-blur-xl
                              hover:bg-blue-500/10 hover:scale-105 hover:shadow-md hover:shadow-blue-500/20
-                             transition-all duration-300 ease-out"
+                             active:scale-95 transition-all duration-300 ease-out flex items-center gap-1"
                   >
+                    <span className="animate-pulse text-xs">✨</span>
                     {suggestion}
                   </button>
                 ))}
               </div>
 
-              {/* Generated Emojis Display */}
-              {generatedEmojis.length > 0 && (
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {generatedEmojis.map((emojiUrl, index) => (
-                    <div key={index} className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur opacity-50 group-hover:opacity-75 transition-all duration-200"></div>
-                      <div className="relative bg-black rounded-2xl p-2">
-                        <img
-                          src={emojiUrl}
-                          alt={`Generated Emoji ${index + 1}`}
-                          className="w-full h-48 object-contain rounded-xl"
-                        />
+              {/* Premium Emoji Display - Glass Morphism Design */}
+              {generatedEmoji && (
+                <div className="mt-10 flex justify-center">
+                  <div className="max-w-sm w-full perspective-1000">
+                    {/* Card with glass morphism effect */}
+                    <div className="group relative rounded-3xl transition-all duration-700 transform hover:rotate-y-10 hover:scale-105">
+                      {/* Glass background with premium gradient border */}
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 opacity-80 blur-sm group-hover:opacity-100 transition-opacity duration-700"></div>
+                      <div className="absolute inset-0.5 rounded-[22px] bg-black/70 backdrop-blur-xl"></div>
+                      
+                      {/* Card content */}
+                      <div className="relative rounded-3xl overflow-hidden backdrop-blur-xl">
+                        {/* Emoji Display Area */}
+                        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-black via-gray-900 to-gray-800">
+                          {/* Premium corner accents */}
+                          <div className="absolute top-0 left-0 w-16 h-16 border-t border-l border-blue-500/30 rounded-tl-3xl"></div>
+                          <div className="absolute bottom-0 right-0 w-16 h-16 border-b border-r border-purple-500/30 rounded-br-3xl"></div>
+                          
+                          {/* Emoji Image with enhanced effects */}
+                          {generatedEmoji.isImage ? (
+                            <div className="absolute inset-0 flex items-center justify-center p-6 transition-all duration-700 group-hover:scale-105">
+                              <div className="relative">
+                                {/* Glow effect */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                                <img 
+                                  src={generatedEmoji.url} 
+                                  alt={`Generated Emoji for ${generatedEmoji.metadata?.prompt || 'prompt'}`}
+                                  className="w-full h-full object-contain relative drop-shadow-2xl transform transition-all duration-700"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <span className="text-9xl drop-shadow-2xl">{generatedEmoji.url}</span>
+                            </div>
+                          )}
+                          
+                          {/* Floating badges */}
+                          <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                            <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-xs font-medium text-blue-300 border border-blue-500/20 shadow-lg shadow-blue-900/20 flex items-center gap-2">
+                              <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                              {generatedEmoji.metadata?.model || 'AI Emoji'}
+                            </div>
+                            <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-xs font-medium text-purple-300 border border-purple-500/20 shadow-lg shadow-purple-900/20">
+                              {generatedEmoji.metadata?.dimensions || '768×768'}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Info Section with improved styling */}
+                        <div className="p-6 space-y-4 backdrop-blur-lg backdrop-saturate-150 bg-gradient-to-b from-gray-900/80 to-black/80">
+                          {/* Title with animated gradient */}
+                          <div className="space-y-1">
+                            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 truncate">
+                              {inputText}
+                            </h3>
+                            <p className="text-gray-400 text-sm flex items-center gap-2">
+                              <svg className="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                              </svg>
+                              {generatedEmoji.metadata?.date}
+                            </p>
+                          </div>
+                          
+                          {/* Enhanced Action Buttons */}
+                          <div className="flex gap-3 pt-2">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(generatedEmoji.url);
+                                toast.success('Copied to clipboard', {
+                                  style: {
+                                    border: '1px solid #4B5563',
+                                    padding: '16px',
+                                    color: '#F3F4F6',
+                                    background: '#1F2937'
+                                  },
+                                  iconTheme: {
+                                    primary: '#6366F1',
+                                    secondary: '#1F2937',
+                                  },
+                                });
+                              }}
+                              className="flex-1 px-4 py-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl text-sm font-medium
+                                        text-gray-200 hover:from-gray-700 hover:to-gray-800 active:scale-95 shadow-md shadow-black/30
+                                        transition-all duration-200 flex items-center justify-center gap-2 border border-gray-700"
+                              aria-label="Copy URL"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Copy
+                            </button>
+                            
+                            <a
+                              href={generatedEmoji.url}
+                              download={`emoji-${inputText.replace(/\s+/g, '-')}.png`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 px-4 py-3 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl text-sm font-medium
+                                        text-white hover:from-indigo-500 hover:to-blue-600 active:scale-95 shadow-md shadow-indigo-900/30
+                                        transition-all duration-200 flex items-center justify-center gap-2 border border-indigo-500/20"
+                              aria-label="Download emoji"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              Download
+                            </a>
+                    </div>
+                          
+                          {/* Additional Actions Row */}
+                          <div className="pt-4 flex justify-between items-center border-t border-gray-800">
+                            <button
+                              onClick={handleSubmit}
+                              className="group text-sm text-gray-400 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
+                              disabled={loading}
+                            >
+                              <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Regenerate
+                            </button>
+                            
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: `AI Emoji: ${inputText}`,
+                                      text: `Check out this AI-generated emoji for "${inputText}"`,
+                                      url: generatedEmoji.url
+                                    }).catch(err => console.error('Error sharing:', err));
+                                  } else {
+                                    navigator.clipboard.writeText(generatedEmoji.url);
+                                    toast.success('URL copied - share it with others!');
+                                  }
+                                }}
+                                className="p-2 text-gray-400 hover:text-blue-300 transition-colors duration-200 rounded-full hover:bg-gray-800"
+                                aria-label="Share"
+                              >
+                                <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                    
+                    {/* Credit embedded in card bottom instead of separate element */}
+                    <div className="text-center py-2">
+                      <p className="text-xs text-gray-600 inline-block px-2 py-0.5 bg-gray-900/70 backdrop-blur-sm rounded-md">
+                        <span className="text-blue-400">AI Emoji</span> Generator
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -534,11 +745,12 @@ const Hero: React.FC = () => {
             <div className={`flex flex-col items-center text-center transform transition-all duration-500 hover:scale-105`}>
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-400/20 rounded-xl blur-xl"></div>
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-xl flex items-center justify-center mb-6 border border-blue-500/20 backdrop-blur-sm relative">
-                  <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
-                  <span className="absolute -top-3 -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-blue-400 text-sm text-white">1</span>
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-xl flex items-center justify-center mb-6 border border-blue-500/20 backdrop-blur-sm relative group overflow-hidden hover:border-blue-500/40 transition-all duration-300">
+                  <div className="absolute inset-0 bg-black/50 rounded-xl group-hover:bg-black/40 transition-all duration-300"></div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-blue-600/20 via-transparent to-transparent transition-opacity duration-300"></div>
+                  <span className="absolute -top-3 -left-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-blue-400 text-white font-bold text-base shadow-lg shadow-blue-500/30">1</span>
+                  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-400 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} stroke="currentColor" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" className="drop-shadow-md" />
                   </svg>
                 </div>
               </div>
@@ -554,11 +766,13 @@ const Hero: React.FC = () => {
             <div className={`flex flex-col items-center text-center transform transition-all duration-500 hover:scale-105`}>
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-cyan-400/20 rounded-xl blur-xl"></div>
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-400/10 to-cyan-400/10 rounded-xl flex items-center justify-center mb-6 border border-blue-400/20 backdrop-blur-sm relative">
-                  <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
-                  <span className="absolute -top-3 -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 text-sm text-white">2</span>
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-400/10 to-cyan-400/10 rounded-xl flex items-center justify-center mb-6 border border-blue-400/20 backdrop-blur-sm relative group overflow-hidden hover:border-cyan-400/40 transition-all duration-300">
+                  <div className="absolute inset-0 bg-black/50 rounded-xl group-hover:bg-black/40 transition-all duration-300"></div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-cyan-500/20 via-transparent to-transparent transition-opacity duration-300"></div>
+                  <span className="absolute -top-3 -left-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 text-white font-bold text-base shadow-lg shadow-cyan-500/30">2</span>
+                  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-cyan-400 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} stroke="currentColor" d="M13 10V3L4 14h7v7l9-11h-7z" className="drop-shadow-md" />
+                    <circle cx="13" cy="6" r="1" fill="currentColor" className="animate-ping opacity-70" style={{ animationDuration: '2.5s' }}/>
                   </svg>
                 </div>
               </div>
@@ -574,11 +788,13 @@ const Hero: React.FC = () => {
             <div className={`flex flex-col items-center text-center transform transition-all duration-500 hover:scale-105`}>
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 rounded-xl blur-xl"></div>
-                <div className="w-20 h-20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 rounded-xl flex items-center justify-center mb-6 border border-cyan-400/20 backdrop-blur-sm relative">
-                  <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
-                  <span className="absolute -top-3 -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-sm text-white">3</span>
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <div className="w-20 h-20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 rounded-xl flex items-center justify-center mb-6 border border-cyan-400/20 backdrop-blur-sm relative group overflow-hidden hover:border-blue-500/40 transition-all duration-300">
+                  <div className="absolute inset-0 bg-black/50 rounded-xl group-hover:bg-black/40 transition-all duration-300"></div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-gradient-to-br from-blue-500/20 via-transparent to-transparent transition-opacity duration-300"></div>
+                  <span className="absolute -top-3 -left-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-bold text-base shadow-lg shadow-blue-500/30">3</span>
+                  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} stroke="currentColor" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" className="drop-shadow-md" />
+                    <circle cx="18" cy="8" r="1" fill="currentColor" className="animate-pulse opacity-70" style={{ animationDuration: '2s' }}/>
                   </svg>
                 </div>
               </div>
@@ -634,9 +850,10 @@ const Hero: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-gradient-to-r from-blue-500/5 to-blue-400/5 rounded-xl p-8 border border-blue-500/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-400 rounded-lg mb-6 flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-400 rounded-lg mb-6 flex items-center justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-white/10 transition-opacity duration-300"></div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white relative z-10 group-hover:scale-110 transition-transform duration-300">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} stroke="currentColor" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" className="drop-shadow-md" />
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-4">Unique Branding</h3>
@@ -644,9 +861,11 @@ const Hero: React.FC = () => {
             </div>
 
             <div className="bg-gradient-to-r from-blue-400/5 to-cyan-400/5 rounded-xl p-8 border border-blue-400/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-lg mb-6 flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-lg mb-6 flex items-center justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-white/10 transition-opacity duration-300"></div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white relative z-10 group-hover:scale-110 transition-transform duration-300">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} stroke="currentColor" d="M13 10V3L4 14h7v7l9-11h-7z" className="drop-shadow-md" />
+                  <circle cx="13" cy="6" r="1" fill="currentColor" className="animate-ping opacity-70" style={{ animationDuration: '2.5s' }}/>
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-4">Instant Creation</h3>
@@ -654,9 +873,11 @@ const Hero: React.FC = () => {
             </div>
 
             <div className="bg-gradient-to-r from-cyan-400/5 to-blue-500/5 rounded-xl p-8 border border-cyan-400/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105">
-              <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg mb-6 flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg mb-6 flex items-center justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-30 bg-white/10 transition-opacity duration-300"></div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white relative z-10 group-hover:scale-110 transition-transform duration-300">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} stroke="currentColor" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" className="drop-shadow-md" />
+                  <circle cx="18" cy="8" r="1" fill="currentColor" className="animate-pulse opacity-70" style={{ animationDuration: '2s' }}/>
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-4">Endless Possibilities</h3>
@@ -802,5 +1023,27 @@ const Hero: React.FC = () => {
     </div>
   );
 };
+
+// Add CSS classes for 3D effects
+const styleTag = typeof document !== 'undefined' ? document.createElement('style') : null;
+if (styleTag) {
+  styleTag.innerHTML = `
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .rotate-y-10 {
+      transform: rotateY(10deg);
+    }
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+  `;
+  document.head.appendChild(styleTag);
+}
 
 export default Hero; 
