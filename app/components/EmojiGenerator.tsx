@@ -23,7 +23,7 @@ const EmojiGenerator: React.FC = () => {
       const response = await generateEmoji(text.trim());
       
       if (response.success && response.emoji) {
-        setEmojiUrl(response.emoji);
+        setEmojiUrl(response?.emoji as any);
         toast.success('Emoji generated successfully!', {
           id: loadingToast,
         });
