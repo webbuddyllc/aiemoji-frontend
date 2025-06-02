@@ -96,7 +96,7 @@ const Hero: React.FC = () => {
     return (
       <div className="relative min-h-screen bg-black">
         {/* Enhanced background with space theme */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {/* Radial gradient base */}
           <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
           
@@ -104,19 +104,19 @@ const Hero: React.FC = () => {
           <div className="absolute inset-0 opacity-30 bg-[url('/noise-texture.png')] mix-blend-overlay"></div>
           
           {/* Grid overlay */}
-          <div className="absolute inset-0 z-0 grid-animation">
+          <div className="absolute inset-0 z-0 grid-animation pointer-events-none">
             <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
           </div>
           
           {/* Light streaks */}
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 pointer-events-none">
             <div className="light-streak light-streak-1 opacity-30"></div>
             <div className="light-streak light-streak-2 opacity-30"></div>
             <div className="light-streak light-streak-3 opacity-30"></div>
           </div>
           
           {/* Floating particles */}
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-0 pointer-events-none">
             <div className="particle particle-1"></div>
             <div className="particle particle-2"></div>
             <div className="particle particle-3"></div>
@@ -494,7 +494,7 @@ const Hero: React.FC = () => {
     <div className="relative">
       <section className="w-full flex flex-col items-center justify-start pt-28 pb-16 px-4 relative overflow-hidden bg-black">
         {/* Enhanced background */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {/* Radial gradient base */}
           <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
           
@@ -507,19 +507,19 @@ const Hero: React.FC = () => {
         </div>
         
         {/* Grid overlay - adjusted opacity to 0.1 */}
-        <div className="absolute inset-0 z-0 grid-animation">
+        <div className="absolute inset-0 z-0 grid-animation pointer-events-none">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
         </div>
         
         {/* Light streaks */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <div className="light-streak light-streak-1 opacity-30"></div>
           <div className="light-streak light-streak-2 opacity-30"></div>
           <div className="light-streak light-streak-3 opacity-30"></div>
         </div>
         
         {/* Floating particles */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="particle particle-1"></div>
           <div className="particle particle-2"></div>
           <div className="particle particle-3"></div>
@@ -572,22 +572,27 @@ const Hero: React.FC = () => {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link 
-                  href="/create" 
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
                   className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 
                             text-white font-medium rounded-lg transition-all duration-200 shadow-lg shadow-blue-500/20 text-lg
                             hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5"
                 >
                   Create Emojis with AI
-                </Link>
-                <Link 
-                  href="/examples" 
+                </button>
+                <button
+                  onClick={() => {
+                    const emojiShowcaseSection = document.getElementById('emoji-showcase');
+                    if (emojiShowcaseSection) {
+                      emojiShowcaseSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className="inline-flex items-center justify-center px-6 py-3 bg-transparent hover:bg-white/5
                             text-white font-medium rounded-lg transition-all duration-200 border border-gray-700
                             hover:border-gray-500 text-lg"
                 >
                   View Examples
-                </Link>
+                </button>
               </div>
               
               {/* Usage stat */}
@@ -641,9 +646,9 @@ const Hero: React.FC = () => {
       </section>
       
       {/* Emoji Showcase Section - NEW */}
-      <section className="w-full pt-20 pb-24 px-4 bg-black -mt-8 relative z-10">
+      <section id="emoji-showcase" className="w-full pt-20 pb-24 px-4 bg-black -mt-8 relative z-10">
         {/* Enhanced background - same as hero */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {/* Radial gradient base */}
           <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
           
@@ -656,7 +661,7 @@ const Hero: React.FC = () => {
         </div>
         
         {/* Grid overlay */}
-        <div className="absolute inset-0 z-0 grid-animation">
+        <div className="absolute inset-0 z-0 grid-animation pointer-events-none">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
         </div>
         
@@ -713,7 +718,7 @@ const Hero: React.FC = () => {
       {/* How to Generate Section */}
       <section className="w-full py-24 px-4 bg-black relative z-10">
         {/* Enhanced background - same as hero */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {/* Radial gradient base */}
           <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
           
@@ -726,7 +731,7 @@ const Hero: React.FC = () => {
         </div>
         
         {/* Grid overlay */}
-        <div className="absolute inset-0 z-0 grid-animation">
+        <div className="absolute inset-0 z-0 grid-animation pointer-events-none">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
         </div>
 
@@ -808,18 +813,18 @@ const Hero: React.FC = () => {
           </div>
 
           <div className="mt-16 text-center">
-            <Link
-              href="/create"
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
               className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 hover:from-blue-600 hover:via-blue-500 hover:to-cyan-500
               text-white font-medium rounded-xl transition-all duration-300 shadow-lg shadow-blue-500/20
-              hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 text-lg relative group overflow-hidden"
+              hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 text-lg relative group overflow-hidden cursor-pointer"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300 animate-pulse"></span>
               <span className="relative">Create Emojis with AI</span>
               <svg className="w-5 h-5 ml-2 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -827,14 +832,14 @@ const Hero: React.FC = () => {
       {/* Why Use an Emoji Generator Section */}
       <section className="w-full py-24 px-4 bg-black relative z-10">
         {/* Enhanced background - same as hero */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
           <div className="absolute inset-0 opacity-30 bg-[url('/noise-texture.png')] mix-blend-overlay"></div>
           <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[50%] bg-gradient-to-br from-blue-900/10 via-blue-700/5 to-transparent rounded-full blur-3xl animate-glow-slow"></div>
           <div className="absolute top-[60%] -right-[20%] w-[60%] h-[40%] bg-gradient-to-br from-indigo-900/10 via-blue-800/5 to-transparent rounded-full blur-3xl animate-glow-slow-reverse"></div>
         </div>
         
-        <div className="absolute inset-0 z-0 grid-animation">
+        <div className="absolute inset-0 z-0 grid-animation pointer-events-none">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
         </div>
 
@@ -890,14 +895,14 @@ const Hero: React.FC = () => {
       {/* How to Write a Good Emoji AI Prompt Section */}
       <section className="w-full py-24 px-4 bg-black relative z-10">
         {/* Enhanced background - same as hero */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-radial from-blue-950/30 via-black to-black"></div>
           <div className="absolute inset-0 opacity-30 bg-[url('/noise-texture.png')] mix-blend-overlay"></div>
           <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[50%] bg-gradient-to-br from-blue-900/10 via-blue-700/5 to-transparent rounded-full blur-3xl animate-glow-slow"></div>
           <div className="absolute top-[60%] -right-[20%] w-[60%] h-[40%] bg-gradient-to-br from-indigo-900/10 via-blue-800/5 to-transparent rounded-full blur-3xl animate-glow-slow-reverse"></div>
         </div>
         
-        <div className="absolute inset-0 z-0 grid-animation">
+        <div className="absolute inset-0 z-0 grid-animation pointer-events-none">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.1]"></div>
         </div>
 
@@ -1020,6 +1025,10 @@ const Hero: React.FC = () => {
           </div>
         </div>
       </footer>
+      <AuthModals 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 };
