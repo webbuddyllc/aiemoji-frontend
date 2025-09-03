@@ -3,63 +3,80 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSavedEmojis } from '../hooks/useSavedEmojis';
+import { toast } from 'react-hot-toast';
 
 const SavedPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { savedEmojis, unsaveEmoji } = useSavedEmojis();
 
-  // Mock data - replace with actual data from your backend
-  const savedEmojis = [
-    {
-      id: 1,
-      name: 'Happy Robot',
-      image: '/api/placeholder/100/100',
-      category: 'robots',
-      createdAt: '2024-01-15',
-      tags: ['robot', 'happy', 'tech']
-    },
-    {
-      id: 2,
-      name: 'Space Cat',
-      image: '/api/placeholder/100/100',
-      category: 'animals',
-      createdAt: '2024-01-14',
-      tags: ['cat', 'space', 'cute']
-    },
-    {
-      id: 3,
-      name: 'Gaming Controller',
-      image: '/api/placeholder/100/100',
-      category: 'gaming',
-      createdAt: '2024-01-13',
-      tags: ['gaming', 'controller', 'tech']
-    }
-  ];
+  // Extract unique categories from saved emojis
+  const allCategories = savedEmojis.flatMap(emoji =>
+    emoji.metadata?.prompt?.toLowerCase().split(' ').filter(word =>
+      ['robot', 'animal', 'cat', 'dog', 'gaming', 'food', 'nature', 'space', 'superhero', 'magic', 'crystal'].includes(word)
+    ) || []
+  );
+
+  const uniqueCategories = [...new Set(allCategories)];
 
   const categories = [
     { id: 'all', name: 'All', count: savedEmojis.length },
-    { id: 'robots', name: 'Robots', count: savedEmojis.filter(e => e.category === 'robots').length },
-    { id: 'animals', name: 'Animals', count: savedEmojis.filter(e => e.category === 'animals').length },
-    { id: 'gaming', name: 'Gaming', count: savedEmojis.filter(e => e.category === 'gaming').length },
-    { id: 'food', name: 'Food', count: 0 },
-    { id: 'nature', name: 'Nature', count: 0 }
+    ...uniqueCategories.map(category => ({
+      id: category,
+      name: category.charAt(0).toUpperCase() + category.slice(1),
+      count: savedEmojis.filter(emoji =>
+        emoji.metadata?.prompt?.toLowerCase().includes(category)
+      ).length
+    }))
   ];
 
   const filteredEmojis = savedEmojis.filter(emoji => {
-    const matchesCategory = selectedCategory === 'all' || emoji.category === selectedCategory;
-    const matchesSearch = emoji.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         emoji.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = selectedCategory === 'all' ||
+      emoji.metadata?.prompt?.toLowerCase().includes(selectedCategory);
+    const matchesSearch = emoji.metadata?.prompt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         emoji.originalPrompt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         emoji.id.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const handleRemoveFromSaved = (emojiId: number) => {
-    // TODO: Implement remove functionality
-    console.log('Remove emoji:', emojiId);
+  const handleRemoveFromSaved = (emojiId: string) => {
+    unsaveEmoji(emojiId);
+    toast.success('Emoji removed from saved', {
+      style: {
+        border: '1px solid #EF4444',
+        padding: '16px',
+        color: '#FEE2E2',
+        background: '#7F1D1D'
+      },
+      iconTheme: {
+        primary: '#EF4444',
+        secondary: '#7F1D1D',
+      },
+    });
   };
 
-  const handleDownload = (emojiId: number) => {
-    // TODO: Implement download functionality
-    console.log('Download emoji:', emojiId);
+  const handleDownload = (emojiUrl: string, prompt: string) => {
+    // Create a download link for the emoji
+    const link = document.createElement('a');
+    link.href = emojiUrl;
+    link.download = `3d-emoji-${prompt.replace(/\s+/g, '-')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success('Emoji downloaded!', {
+      style: {
+        border: '1px solid #10B981',
+        padding: '16px',
+        color: '#D1FAE5',
+        background: '#064E3B'
+      },
+      iconTheme: {
+        primary: '#10B981',
+        secondary: '#064E3B',
+      },
+    });
   };
 
   return (
@@ -111,7 +128,7 @@ const SavedPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
-            <h1 className="text-2xl font-bold text-white">Saved Emojis</h1>
+            <h1 className="text-2xl font-bold text-white">Saved 3D Emojis</h1>
           </div>
         </div>
       </div>
@@ -144,9 +161,11 @@ const SavedPage = () => {
                     </div>
                   </div>
                   <div className="flex items-end">
-                    <button className="px-6 py-3 bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 hover:from-gray-500 hover:via-gray-400 hover:to-gray-300 text-white rounded-lg font-medium transition-all duration-300 shadow-lg shadow-gray-500/20 hover:shadow-gray-500/30">
-                      Create New
-                    </button>
+                    <Link href="/">
+                      <button className="px-6 py-3 bg-gradient-to-r from-emerald-600 via-cyan-500 to-blue-500 hover:from-emerald-500 hover:via-cyan-400 hover:to-blue-400 text-white rounded-lg font-medium transition-all duration-300 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30">
+                        Create New 3D Emoji
+                      </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -158,8 +177,8 @@ const SavedPage = () => {
             <div className="relative bg-black/40 backdrop-blur-xl rounded-2xl p-6 border border-gray-500/20">
               <div className="absolute inset-0 bg-gradient-radial from-gray-500/10 via-transparent to-transparent blur-xl"></div>
               <div className="relative text-center">
-                <div className="text-3xl font-bold text-[#ff6b2b] mb-2">{savedEmojis.length}</div>
-                <div className="text-gray-400">Total Saved</div>
+                <div className="text-3xl font-bold text-emerald-400 mb-2">{savedEmojis.length}</div>
+                <div className="text-gray-400">Saved Emojis</div>
               </div>
             </div>
           </div>
@@ -190,20 +209,27 @@ const SavedPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {filteredEmojis.map((emoji) => (
               <div key={emoji.id} className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-gray-500 via-gray-400 to-gray-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
-                <div className="relative bg-black/40 backdrop-blur-xl rounded-2xl border border-gray-500/20 overflow-hidden hover:border-gray-400/40 transition-all duration-300 hover:scale-105">
-                  <div className="absolute inset-0 bg-gradient-radial from-gray-500/10 via-transparent to-transparent blur-xl"></div>
-                  
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 via-cyan-400 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+                <div className="relative bg-black/40 backdrop-blur-xl rounded-2xl border border-emerald-500/20 overflow-hidden hover:border-emerald-400/40 transition-all duration-300 hover:scale-105">
+                  <div className="absolute inset-0 bg-gradient-radial from-emerald-500/10 via-transparent to-transparent blur-xl"></div>
+
                   {/* Emoji Image */}
-                  <div className="relative aspect-square bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                    <div className="w-20 h-20 bg-gradient-to-br from-[#ff6b2b] to-[#ff69b4] rounded-full flex items-center justify-center text-3xl shadow-lg">
-                      🎨
-                    </div>
+                  <div className="relative aspect-square bg-gradient-to-br from-emerald-950 via-cyan-950 to-blue-950 flex items-center justify-center">
+                    {emoji.isImage ? (
+                      <img
+                        src={emoji.emoji}
+                        alt={`Generated 3D Emoji: ${emoji.metadata?.prompt || emoji.originalPrompt}`}
+                        className="w-full h-full object-contain p-4"
+                      />
+                    ) : (
+                      <span className="text-6xl">{emoji.emoji}</span>
+                    )}
+
                     {/* Hover Actions */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
                       <button
-                        onClick={() => handleDownload(emoji.id)}
-                        className="p-2 bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 hover:from-gray-500 hover:via-gray-400 hover:to-gray-300 text-white rounded-lg transition-all duration-200 shadow-lg"
+                        onClick={() => handleDownload(emoji.emoji, emoji.metadata?.prompt || emoji.originalPrompt || 'emoji')}
+                        className="p-2 bg-gradient-to-r from-emerald-600 via-cyan-500 to-blue-500 hover:from-emerald-500 hover:via-cyan-400 hover:to-blue-400 text-white rounded-lg transition-all duration-200 shadow-lg"
                         title="Download"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -224,24 +250,19 @@ const SavedPage = () => {
 
                   {/* Emoji Info */}
                   <div className="relative p-4">
-                    <h3 className="font-semibold text-white mb-2 truncate">{emoji.name}</h3>
+                    <h3 className="font-semibold text-white mb-2 truncate">
+                      {emoji.metadata?.prompt || emoji.originalPrompt || 'Generated Emoji'}
+                    </h3>
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {emoji.tags.slice(0, 2).map((tag, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-black/60 text-gray-300 text-xs rounded-full border border-gray-500/30"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {emoji.tags.length > 2 && (
-                        <span className="px-2 py-1 bg-black/60 text-gray-300 text-xs rounded-full border border-gray-500/30">
-                          +{emoji.tags.length - 2}
-                        </span>
-                      )}
+                      <span className="px-2 py-1 bg-emerald-600/60 text-emerald-200 text-xs rounded-full border border-emerald-500/30">
+                        3D
+                      </span>
+                      <span className="px-2 py-1 bg-cyan-600/60 text-cyan-200 text-xs rounded-full border border-cyan-500/30">
+                        {emoji.metadata?.model?.split(' ')[0] || 'AI'}
+                      </span>
                     </div>
                     <div className="text-xs text-gray-400">
-                      Saved {new Date(emoji.createdAt).toLocaleDateString()}
+                      Saved {new Date(emoji.savedAt).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -255,18 +276,20 @@ const SavedPage = () => {
             <div className="relative bg-black/40 backdrop-blur-xl rounded-2xl p-16 border border-gray-500/20 text-center">
               <div className="absolute inset-0 bg-gradient-radial from-gray-500/10 via-transparent to-transparent blur-xl"></div>
               <div className="relative">
-                <div className="w-24 h-24 mx-auto mb-6 bg-black/60 rounded-full flex items-center justify-center border border-gray-500/30">
-                  <svg className="w-12 h-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-600/20 to-cyan-600/20 rounded-full flex items-center justify-center border border-emerald-500/30">
+                  <svg className="w-12 h-12 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No saved emojis yet</h3>
+                <h3 className="text-xl font-semibold text-white mb-2">No saved 3D emojis yet</h3>
                 <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                  Start creating and saving your favorite emojis. They'll appear here for easy access.
+                  Start creating and saving your favorite 3D emojis. They'll appear here for easy access and management.
                 </p>
-                <button className="px-6 py-3 bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 hover:from-gray-500 hover:via-gray-400 hover:to-gray-300 text-white rounded-lg font-medium transition-all duration-300 shadow-lg shadow-gray-500/20 hover:shadow-gray-500/30">
-                  Create Your First Emoji
-                </button>
+                <Link href="/">
+                  <button className="px-6 py-3 bg-gradient-to-r from-emerald-600 via-cyan-500 to-blue-500 hover:from-emerald-500 hover:via-cyan-400 hover:to-blue-400 text-white rounded-lg font-medium transition-all duration-300 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30">
+                    Create Your First 3D Emoji
+                  </button>
+                </Link>
               </div>
             </div>
           </div>

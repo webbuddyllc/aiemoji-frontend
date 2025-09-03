@@ -6,14 +6,17 @@ import Image from 'next/image';
 import './hero.css'; // We'll create this file next
 import { useUser } from '../context/UserContext';
 import { generateEmoji } from '../services/emojiService';
+import { useSavedEmojis } from '../hooks/useSavedEmojis';
+import { usePricingValidation } from '../hooks/usePricingValidation';
 import { toast } from 'react-hot-toast';
 import AuthModals from './AuthModals';
+import UsageDisplay from './UsageDisplay';
 
 const Hero: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [inputText, setInputText] = useState('');
   const [emojis, setEmojis] = useState<string[]>([]);
-  const { isAuthenticated } = useUser();
+  const { user, isAuthenticated } = useUser();
   const [emojiPrompt, setEmojiPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -29,6 +32,60 @@ const Hero: React.FC = () => {
     };
   } | null>(null);
 
+  // Save functionality
+  const { saveEmoji, unsaveEmoji, isEmojiSaved, getSavedEmojiId } = useSavedEmojis();
+
+  // Pricing validation
+  const { checkGenerationLimit, showUpgradePrompt, getValidationResult, refreshUsage } = usePricingValidation();
+  const validation = getValidationResult();
+
+  // Handle save/unsave emoji
+  const handleSaveEmoji = () => {
+    if (!generatedEmoji) return;
+
+    const emojiUrl = generatedEmoji.url;
+    const isSaved = isEmojiSaved(emojiUrl);
+
+    if (isSaved) {
+      const savedId = getSavedEmojiId(emojiUrl);
+      if (savedId) {
+        unsaveEmoji(savedId);
+        toast.success('Removed from saved emojis', {
+          style: {
+            border: '1px solid #EF4444',
+            padding: '16px',
+            color: '#FEE2E2',
+            background: '#7F1D1D'
+          },
+          iconTheme: {
+            primary: '#EF4444',
+            secondary: '#7F1D1D',
+          },
+        });
+      }
+    } else {
+      // Convert generatedEmoji to StyledEmoji format
+      const emojiToSave = {
+        emoji: generatedEmoji.url, // Map url to emoji property
+        isImage: generatedEmoji.isImage,
+        metadata: generatedEmoji.metadata
+      };
+      saveEmoji(emojiToSave, inputText);
+      toast.success('Emoji saved!', {
+        style: {
+          border: '1px solid #10B981',
+          padding: '16px',
+          color: '#D1FAE5',
+          background: '#064E3B'
+        },
+        iconTheme: {
+          primary: '#10B981',
+          secondary: '#064E3B',
+        },
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) {
@@ -43,12 +100,32 @@ const Hero: React.FC = () => {
       return;
     }
 
+    // Check usage limits for free users
+    if (!validation.isPremiumUser && validation.isLimitReached) {
+      toast.error('Monthly generation limit reached. Upgrade to Premium for unlimited access!');
+      showUpgradePrompt(
+        'Monthly Limit Reached',
+        'You\'ve used all your free generations. Upgrade to Premium for unlimited access!',
+        true,
+        validation.usageCount,
+        validation.usageLimit
+      );
+      return;
+    }
+
+    // Check if generation is allowed (additional validation)
+    const canGenerate = await checkGenerationLimit();
+    if (!canGenerate && !validation.isPremiumUser) {
+      toast.error('Unable to verify usage limit. Please try again.');
+      return;
+    }
+
     setLoading(true);
     const loadingToast = toast.loading('Generating your emoji...');
 
     try {
       console.log(`[tf7udl] Generating emoji for prompt: "${inputText.trim()}"`);
-      const response = await generateEmoji(inputText.trim());
+      const response = await generateEmoji(inputText.trim(), user?.id);
       
       console.log(`[tf7udl] Emoji generation response:`, {
         success: response.success,
@@ -62,6 +139,10 @@ const Hero: React.FC = () => {
           isImage: response.emoji.isImage || false,
           metadata: response.emoji.metadata
         });
+
+        // Refresh usage data after successful generation
+        refreshUsage();
+
         toast.success('Emoji generated successfully!', {
           id: loadingToast,
         });
@@ -73,7 +154,26 @@ const Hero: React.FC = () => {
           type: response.errorType,
           details: response.details
         });
-        toast.error(errorMessage, { id: loadingToast });
+
+        // Handle specific error types
+        if (response.errorType === 'USAGE_LIMIT_REACHED') {
+          toast.error('Monthly generation limit reached. Upgrade to Premium for unlimited access!', {
+            id: loadingToast,
+            duration: 6000
+          });
+          // Show upgrade prompt for usage limit errors with usage data
+          setTimeout(() => {
+            showUpgradePrompt(
+              'Monthly Limit Reached',
+              'You\'ve used all your free generations. Upgrade to Premium for unlimited access!',
+              true,
+              validation.usageCount,
+              validation.usageLimit
+            );
+          }, 1000);
+        } else {
+          toast.error(errorMessage, { id: loadingToast });
+        }
       }
     } catch (error) {
       // Handle exception
@@ -330,23 +430,46 @@ const Hero: React.FC = () => {
                 ))}
               </div>
 
+              {/* Usage Display for authenticated users */}
+              {isAuthenticated && (
+                <div className="mt-6 flex justify-center">
+                  <UsageDisplay compact={true} />
+                </div>
+              )}
+
               {/* Premium Emoji Display - Glass Morphism Design */}
               {generatedEmoji && (
                 <div className="mt-6 flex justify-center">
                   <div className="max-w-xs w-full perspective-1000">
                     {/* Card with glass morphism effect */}
-                    <div className="group relative rounded-3xl transition-all duration-700 transform hover:rotate-y-10 hover:scale-105">
+                    <div className={`group relative rounded-3xl transition-all duration-700 transform hover:rotate-y-10 hover:scale-105 ${
+                      isEmojiSaved(generatedEmoji.url) ? 'ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-gray-900' : ''
+                    }`}>
                       {/* Glass background with premium gradient border */}
-                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-gray-500/20 via-gray-400/20 to-gray-600/20 opacity-80 blur-sm group-hover:opacity-100 transition-opacity duration-700"></div>
-                      <div className="absolute inset-0.5 rounded-[22px] bg-black/70 backdrop-blur-xl"></div>
+                      <div className={`absolute inset-0 rounded-3xl bg-gradient-to-br opacity-80 blur-sm group-hover:opacity-100 transition-opacity duration-700 ${
+                        isEmojiSaved(generatedEmoji.url)
+                          ? 'from-emerald-500/20 via-cyan-400/20 to-blue-600/20'
+                          : 'from-gray-500/20 via-gray-400/20 to-gray-600/20'
+                      }`}></div>
+                      <div className={`absolute inset-0.5 rounded-[22px] backdrop-blur-xl ${
+                        isEmojiSaved(generatedEmoji.url) ? 'bg-emerald-950/70' : 'bg-black/70'
+                      }`}></div>
                       
                       {/* Card content */}
                       <div className="relative rounded-3xl overflow-hidden backdrop-blur-xl">
                         {/* Emoji Display Area */}
-                        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-black via-gray-900 to-gray-800">
+                        <div className={`relative aspect-square overflow-hidden bg-gradient-to-br ${
+                          isEmojiSaved(generatedEmoji.url)
+                            ? 'from-emerald-950 via-cyan-950 to-blue-950'
+                            : 'from-black via-gray-900 to-gray-800'
+                        }`}>
                           {/* Premium corner accents */}
-                          <div className="absolute top-0 left-0 w-16 h-16 border-t border-l border-gray-500/30 rounded-tl-3xl"></div>
-                          <div className="absolute bottom-0 right-0 w-16 h-16 border-b border-r border-purple-500/30 rounded-br-3xl"></div>
+                          <div className={`absolute top-0 left-0 w-16 h-16 border-t border-l rounded-tl-3xl ${
+                            isEmojiSaved(generatedEmoji.url) ? 'border-emerald-500/30' : 'border-gray-500/30'
+                          }`}></div>
+                          <div className={`absolute bottom-0 right-0 w-16 h-16 border-b border-r rounded-br-3xl ${
+                            isEmojiSaved(generatedEmoji.url) ? 'border-cyan-500/30' : 'border-purple-500/30'
+                          }`}></div>
                           
                           {/* Emoji Image with enhanced effects */}
                           {generatedEmoji.isImage ? (
@@ -369,76 +492,172 @@ const Hero: React.FC = () => {
                           
                           {/* Floating badges */}
                           <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-                            <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-xs font-medium text-gray-300 border border-gray-500/20 shadow-lg shadow-gray-900/20 flex items-center gap-2">
-                              <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
-                              {generatedEmoji.metadata?.model || 'AI Emoji'}
+                            {/* Saved indicator */}
+                            {isEmojiSaved(generatedEmoji.url) && (
+                              <div className="px-3 py-1.5 bg-emerald-600/90 backdrop-blur-md rounded-full text-xs font-medium text-white border border-emerald-500/30 shadow-lg shadow-emerald-900/30 flex items-center gap-2 animate-pulse">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                </svg>
+                                Saved
+                              </div>
+                            )}
+                            <div className="px-3 py-1.5 bg-gradient-to-r from-cyan-600/80 to-blue-600/80 backdrop-blur-md rounded-full text-xs font-medium text-white border border-cyan-500/30 shadow-lg shadow-cyan-900/20 flex items-center gap-2">
+                              <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+                              3D {generatedEmoji.metadata?.model || 'AI Emoji'}
                             </div>
-                            <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-xs font-medium text-purple-300 border border-purple-500/20 shadow-lg shadow-purple-900/20">
+                            <div className="px-3 py-1.5 bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md rounded-full text-xs font-medium text-white border border-purple-500/30 shadow-lg shadow-purple-900/20">
                               {generatedEmoji.metadata?.dimensions || '768×768'}
                             </div>
                           </div>
                         </div>
                         
                         {/* Info Section with improved styling */}
-                        <div className="p-6 space-y-4 backdrop-blur-lg backdrop-saturate-150 bg-gradient-to-b from-gray-900/80 to-black/80">
+                        <div className={`p-6 space-y-4 backdrop-blur-lg backdrop-saturate-150 bg-gradient-to-b ${
+                          isEmojiSaved(generatedEmoji.url)
+                            ? 'from-emerald-950/90 via-cyan-950/80 to-blue-950/90'
+                            : 'from-gray-900/80 to-black/80'
+                        }`}>
                           {/* Title with animated gradient */}
                           <div className="space-y-1">
-                            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500 truncate">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="px-2 py-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0113.971 9h1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clipRule="evenodd" />
+                                </svg>
+                                3D
+                              </span>
+                              {isEmojiSaved(generatedEmoji.url) && (
+                                <span className="px-2 py-1 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-semibold rounded-full flex items-center gap-1 animate-pulse">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                  </svg>
+                                  Saved
+                                </span>
+                              )}
+                            </div>
+                            <h3 className={`text-xl font-bold bg-clip-text text-transparent truncate ${
+                              isEmojiSaved(generatedEmoji.url)
+                                ? 'bg-gradient-to-r from-emerald-300 via-cyan-300 to-blue-300'
+                                : 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500'
+                            }`}>
                               {inputText}
                             </h3>
                             <p className="text-gray-400 text-sm flex items-center gap-2">
                               <svg className="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                               </svg>
-                              {generatedEmoji.metadata?.date}
+                              Generated {generatedEmoji.metadata?.date}
                             </p>
                           </div>
                           
                           {/* Enhanced Action Buttons */}
-                          <div className="flex gap-3 pt-2">
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(generatedEmoji.url);
-                                toast.success('Copied to clipboard', {
-                                  style: {
-                                    border: '1px solid #4B5563',
-                                    padding: '16px',
-                                    color: '#F3F4F6',
-                                    background: '#1F2937'
-                                  },
-                                  iconTheme: {
-                                    primary: '#6366F1',
-                                    secondary: '#1F2937',
-                                  },
-                                });
-                              }}
-                              className="flex-1 px-4 py-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl text-sm font-medium
-                                        text-gray-200 hover:from-gray-700 hover:to-gray-800 active:scale-95 shadow-md shadow-black/30
-                                        transition-all duration-200 flex items-center justify-center gap-2 border border-gray-700"
-                              aria-label="Copy URL"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                              Copy
-                            </button>
-                            
-                            <a
-                              href={generatedEmoji.url}
-                              download={`emoji-${inputText.replace(/\s+/g, '-')}.png`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 px-4 py-3 bg-gradient-to-br from-gray-600 to-gray-700 rounded-xl text-sm font-medium
-                                        text-white hover:from-gray-500 hover:to-gray-600 active:scale-95 shadow-md shadow-indigo-900/30
-                                        transition-all duration-200 flex items-center justify-center gap-2 border border-indigo-500/20"
-                              aria-label="Download emoji"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                              Download
-                            </a>
-                    </div>
+                          <div className="flex flex-col gap-3 pt-2">
+                            {/* Primary Action Row */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <button
+                                onClick={handleSaveEmoji}
+                                className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 border shadow-md ${
+                                  isEmojiSaved(generatedEmoji.url)
+                                    ? 'bg-gradient-to-br from-red-600 to-red-700 text-white hover:from-red-500 hover:to-red-600 border-red-500/20 shadow-red-900/30'
+                                    : 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white hover:from-emerald-500 hover:to-emerald-600 border-emerald-500/20 shadow-emerald-900/30'
+                                } active:scale-95`}
+                                aria-label={isEmojiSaved(generatedEmoji.url) ? "Remove from saved" : "Save emoji"}
+                              >
+                                <svg
+                                  className={`w-4 h-4 transition-transform duration-200 ${
+                                    isEmojiSaved(generatedEmoji.url) ? 'scale-110' : ''
+                                  }`}
+                                  fill={isEmojiSaved(generatedEmoji.url) ? "currentColor" : "none"}
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                                {isEmojiSaved(generatedEmoji.url) ? 'Saved' : 'Save'}
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(generatedEmoji.url);
+                                  toast.success('URL copied to clipboard!', {
+                                    style: {
+                                      border: '1px solid #3B82F6',
+                                      padding: '16px',
+                                      color: '#DBEAFE',
+                                      background: '#1E40AF'
+                                    },
+                                    iconTheme: {
+                                      primary: '#3B82F6',
+                                      secondary: '#1E40AF',
+                                    },
+                                  });
+                                }}
+                                className="px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl text-sm font-medium
+                                          hover:from-blue-500 hover:to-blue-600 active:scale-95 shadow-md shadow-blue-900/30
+                                          transition-all duration-200 flex items-center justify-center gap-2 border border-blue-500/20"
+                                aria-label="Copy URL"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Copy URL
+                              </button>
+                            </div>
+
+                            {/* Secondary Action Row */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <a
+                                href={generatedEmoji.url}
+                                download={`3d-emoji-${inputText.replace(/\s+/g, '-')}.png`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-700 text-white rounded-xl text-sm font-medium
+                                          hover:from-purple-500 hover:to-purple-600 active:scale-95 shadow-md shadow-purple-900/30
+                                          transition-all duration-200 flex items-center justify-center gap-2 border border-purple-500/20"
+                                aria-label="Download emoji"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download
+                              </a>
+
+                              <button
+                                onClick={() => {
+                                  if (navigator.share && navigator.canShare({ url: generatedEmoji.url })) {
+                                    navigator.share({
+                                      title: `3D Emoji: ${inputText}`,
+                                      text: `Check out this amazing 3D emoji I generated: ${inputText}`,
+                                      url: generatedEmoji.url
+                                    }).catch(err => console.error('Error sharing:', err));
+                                  } else {
+                                    navigator.clipboard.writeText(`${generatedEmoji.url}`);
+                                    toast.success('Link shared to clipboard!', {
+                                      style: {
+                                        border: '1px solid #8B5CF6',
+                                        padding: '16px',
+                                        color: '#EDE9FE',
+                                        background: '#581C87'
+                                      },
+                                      iconTheme: {
+                                        primary: '#8B5CF6',
+                                        secondary: '#581C87',
+                                      },
+                                    });
+                                  }
+                                }}
+                                className="px-4 py-3 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-xl text-sm font-medium
+                                          hover:from-indigo-500 hover:to-indigo-600 active:scale-95 shadow-md shadow-indigo-900/30
+                                          transition-all duration-200 flex items-center justify-center gap-2 border border-indigo-500/20"
+                                aria-label="Share emoji"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                </svg>
+                                Share
+                              </button>
+                            </div>
+                          </div>
                           
                           {/* Additional Actions Row */}
                           <div className="pt-4 flex justify-between items-center border-t border-gray-800">

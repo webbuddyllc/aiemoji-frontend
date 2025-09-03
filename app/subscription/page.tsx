@@ -4,22 +4,50 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useStripe } from '../../hooks/useStripe';
 import { useUser } from '../context/UserContext';
+import { usePricingValidation } from '../hooks/usePricingValidation';
 import { PLANS } from '../../lib/plans';
 
 const SubscriptionPage = () => {
   const { createCheckoutSession, loading, error } = useStripe();
   const { user, isAuthenticated, setUser } = useUser();
+  const { getValidationResult, refreshUsage } = usePricingValidation();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [daysUntilReset, setDaysUntilReset] = useState<number>(15);
 
-  const currentPlan = user?.subscription?.planType || 'FREE';
+  const validation = getValidationResult();
+  const currentPlan = validation.planType;
   const usageStats = {
-    emojisCreated: user?.subscription?.usageCount || 0,
-    emojisRemaining: (user?.subscription?.usageLimit || 5) - (user?.subscription?.usageCount || 0),
-    totalLimit: user?.subscription?.usageLimit || 5,
-    daysUntilReset: 15,
-    planType: user?.subscription?.planType || 'FREE',
-    status: user?.subscription?.status || 'active'
+    emojisCreated: validation.usageCount,
+    emojisRemaining: validation.remainingGenerations,
+    totalLimit: validation.usageLimit,
+    daysUntilReset: daysUntilReset,
+    planType: validation.planType,
+    status: validation.isPremiumUser ? 'active' : 'active'
   };
+
+  // Fetch days until reset on mount
+  useEffect(() => {
+    const fetchDaysUntilReset = async () => {
+      try {
+        const response = await fetch('/api/usage/reset');
+        if (response.ok) {
+          const data = await response.json();
+          setDaysUntilReset(data.daysUntilReset || 15);
+        }
+      } catch (error) {
+        console.error('Failed to fetch days until reset:', error);
+      }
+    };
+
+    fetchDaysUntilReset();
+  }, []);
+
+  // Refresh usage data on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshUsage();
+    }
+  }, [isAuthenticated, refreshUsage]);
 
   // Check for success parameter and refresh user data
   useEffect(() => {
@@ -69,6 +97,9 @@ const SubscriptionPage = () => {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
 
+          // Refresh usage data as well
+          setTimeout(() => refreshUsage(), 500);
+
           // If this was a guest user upgrade, they should now be authenticated
           if (specificUserId && !user) {
             console.log('Guest user upgraded to authenticated user');
@@ -97,8 +128,11 @@ const SubscriptionPage = () => {
         await createCheckoutSession('PREMIUM', 'monthly', user?.id || 'guest-user', user?.email || '');
       }
 
-      // Refresh user data after successful action
-      setTimeout(refreshUserData, 1000);
+      // Refresh user data and usage after successful action
+      setTimeout(() => {
+        refreshUserData();
+        refreshUsage();
+      }, 1000);
     } catch (error) {
       console.error('Plan selection error:', error);
     }
@@ -200,11 +234,11 @@ const SubscriptionPage = () => {
           <div className="mt-6 flex justify-center">
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-black/60 backdrop-blur-xl border border-gray-500/30 rounded-full">
               <div className={`w-3 h-3 rounded-full ${
-                currentPlan === 'PREMIUM' ? 'bg-[#ff6b2b]' : 'bg-gray-400'
+                validation.isPremiumUser ? 'bg-[#ff6b2b]' : 'bg-gray-400'
               } animate-pulse`}></div>
               <span className="text-white font-semibold">
-                Current Plan: {currentPlan === 'PREMIUM' ? 'Premium' : 'Free'}
-                {currentPlan === 'PREMIUM' && user?.subscription?.billingFrequency && (
+                Current Plan: {validation.isPremiumUser ? 'Premium' : 'Free'}
+                {validation.isPremiumUser && user?.subscription?.billingFrequency && (
                   <span className="text-gray-300 text-sm ml-2">
                     ({user.subscription.billingFrequency})
                   </span>
@@ -224,33 +258,86 @@ const SubscriptionPage = () => {
           <div className="relative group max-w-2xl mx-auto">
             {/* Decorative elements */}
             <div className="absolute -inset-1 bg-gradient-to-r from-gray-500 via-gray-400 to-gray-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
-            
+
             {/* Main card with enhanced glass effect */}
             <div className="relative bg-black/40 rounded-2xl p-1 backdrop-blur-xl border border-gray-500/20">
               <div className="absolute inset-0 bg-gradient-radial from-gray-500/10 via-transparent to-transparent blur-xl"></div>
-              
+
               <div className="relative p-8 text-center">
                 <h3 className="text-2xl font-bold text-white mb-6">Current Usage</h3>
-                
-                {/* Progress Bar */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400">Emojis Created</span>
-                    <span className="text-white font-medium">{usageStats.emojisCreated}/{usageStats.totalLimit}</span>
+
+                {/* Loading State */}
+                {validation.isLoading && (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-8 h-8 border-2 border-gray-600 border-t-[#ff6b2b] rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-400">Loading usage data...</p>
                   </div>
-                  <div className="w-full bg-black/60 rounded-full h-3 border border-gray-500/30">
-                    <div 
-                      className="bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 h-3 rounded-full transition-all duration-500 shadow-lg"
-                      style={{ width: `${(usageStats.emojisCreated / usageStats.totalLimit) * 100}%` }}
-                    ></div>
+                )}
+
+                {/* Error State */}
+                {validation.error && !validation.isLoading && (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-red-400 mb-4">Failed to load usage data</p>
+                    <button
+                      onClick={() => refreshUsage()}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors duration-200"
+                    >
+                      Try Again
+                    </button>
                   </div>
-                </div>
-                
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-[#ff6b2b] mb-2">{usageStats.emojisRemaining}</div>
-                  <div className="text-gray-400">Emojis remaining</div>
-                  <div className="text-sm text-gray-500 mt-2">Resets in {usageStats.daysUntilReset} days</div>
-                </div>
+                )}
+
+                {/* Usage Display */}
+                {!validation.isLoading && !validation.error && (
+                  <>
+                    {validation.isPremiumUser ? (
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-3 mb-4">
+                          <svg className="w-8 h-8 text-[#ff6b2b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-2xl font-bold text-[#ff6b2b]">Unlimited</span>
+                        </div>
+                        <div className="text-gray-400">Generate as many emojis as you want!</div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Progress Bar */}
+                        <div className="mb-6">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-400">Emojis Created</span>
+                            <span className={`font-medium ${validation.isLimitReached ? 'text-red-400' : 'text-white'}`}>
+                              {usageStats.emojisCreated}/{usageStats.totalLimit}
+                            </span>
+                          </div>
+                          <div className="w-full bg-black/60 rounded-full h-3 border border-gray-500/30">
+                            <div
+                              className={`h-3 rounded-full transition-all duration-500 shadow-lg ${
+                                validation.isLimitReached
+                                  ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-400'
+                                  : 'bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400'
+                              }`}
+                              style={{ width: `${Math.min((usageStats.emojisCreated / usageStats.totalLimit) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="text-center">
+                          <div className={`text-3xl font-bold mb-2 ${
+                            validation.isLimitReached ? 'text-red-400' : 'text-[#ff6b2b]'
+                          }`}>
+                            {usageStats.emojisRemaining}
+                          </div>
+                          <div className="text-gray-400">Emojis remaining</div>
+                          <div className="text-sm text-gray-500 mt-2">Resets in {usageStats.daysUntilReset} days</div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -262,19 +349,19 @@ const SubscriptionPage = () => {
             {plans.map((plan, index) => (
               <div key={plan.name} className="relative group">
                 <div className={`absolute -inset-1 rounded-2xl blur transition-all duration-1000 ${
-                  plan.name === currentPlan
+                  (plan.name === 'PREMIUM' && validation.isPremiumUser) || (plan.name === 'FREE' && !validation.isPremiumUser)
                     ? 'bg-gradient-to-r from-[#ff6b2b] via-[#ff69b4] to-[#ff6b2b] opacity-40'
                     : 'bg-gradient-to-r from-gray-500 via-gray-400 to-gray-600 opacity-20 group-hover:opacity-30'
                 }`}></div>
-                
+
                 <div className={`relative bg-black/40 backdrop-blur-xl rounded-2xl p-1 border transition-all duration-300 hover:scale-105 ${
-                  plan.name === currentPlan
+                  (plan.name === 'PREMIUM' && validation.isPremiumUser) || (plan.name === 'FREE' && !validation.isPremiumUser)
                     ? 'border-[#ff6b2b]/60 ring-2 ring-[#ff6b2b]/20'
                     : 'border-gray-500/20 hover:border-gray-400/40'
                 }`}>
                   <div className="absolute inset-0 bg-gradient-radial from-gray-500/10 via-transparent to-transparent blur-xl"></div>
                   
-                  {plan.name === currentPlan && (
+                  {((plan.name === 'PREMIUM' && validation.isPremiumUser) || (plan.name === 'FREE' && !validation.isPremiumUser)) && (
                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                       <span className="bg-gradient-to-r from-[#ff6b2b] via-[#ff69b4] to-[#ff6b2b] text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
                         Current Plan
@@ -300,16 +387,16 @@ const SubscriptionPage = () => {
 
                     <button
                       onClick={() => handlePlanSelection(plan.name as 'FREE' | 'PREMIUM')}
-                      disabled={loading || plan.name === currentPlan}
+                      disabled={loading || ((plan.name === 'PREMIUM' && validation.isPremiumUser) || (plan.name === 'FREE' && !validation.isPremiumUser))}
                       className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
-                        plan.name === currentPlan
+                        ((plan.name === 'PREMIUM' && validation.isPremiumUser) || (plan.name === 'FREE' && !validation.isPremiumUser))
                           ? 'bg-gradient-to-r from-[#ff6b2b] via-[#ff69b4] to-[#ff6b2b] text-white cursor-not-allowed border border-[#ff6b2b]/30'
                           : plan.name === 'PREMIUM'
                           ? 'bg-gradient-to-r from-[#ff6b2b] via-[#ff69b4] to-[#ff6b2b] hover:from-[#ff6b2b]/90 hover:via-[#ff69b4]/90 hover:to-[#ff6b2b]/90 text-white hover:shadow-lg hover:shadow-[#ff6b2b]/20 disabled:opacity-50 disabled:cursor-not-allowed'
                           : 'bg-black/60 text-gray-300 cursor-not-allowed border border-gray-500/30'
                       }`}
                     >
-                      {loading ? 'Processing...' : plan.name === currentPlan ? 'Current Plan' : plan.name === 'PREMIUM' ? 'Upgrade to Premium' : 'Free Plan'}
+                      {loading ? 'Processing...' : ((plan.name === 'PREMIUM' && validation.isPremiumUser) || (plan.name === 'FREE' && !validation.isPremiumUser)) ? 'Current Plan' : plan.name === 'PREMIUM' ? 'Upgrade to Premium' : 'Free Plan'}
                     </button>
                   </div>
                 </div>

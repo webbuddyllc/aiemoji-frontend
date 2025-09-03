@@ -9,20 +9,20 @@ const Replicate = require('replicate');
 require('dotenv').config({ path: '.env.local' });
 
 // Test configuration
-const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
-const REPLICATE_MODEL_VERSION = process.env.REPLICATE_MODEL_VERSION || '5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa';
+const REPLICATE_API_TOKEN = process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN || process.env.REPLICATE_API_TOKEN;
+const REPLICATE_MODEL_VERSION = process.env.REPLICATE_MODEL_VERSION || 'stability-ai/stable-diffusion:db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf';
 
 async function testReplicateIntegration() {
   console.log('🔍 Testing Replicate API Integration...\n');
 
   // Check if API token is configured
   if (!REPLICATE_API_TOKEN) {
-    console.error('❌ REPLICATE_API_TOKEN is not set in your .env.local file');
+    console.error('❌ NEXT_PUBLIC_REPLICATE_API_TOKEN is not set in your .env.local file');
     console.log('📝 Please follow these steps:');
     console.log('   1. Go to https://replicate.com/account/api-tokens');
     console.log('   2. Create a new API token');
     console.log('   3. Add it to your .env.local file:');
-    console.log('      REPLICATE_API_TOKEN=your_token_here');
+    console.log('      NEXT_PUBLIC_REPLICATE_API_TOKEN=your_token_here');
     process.exit(1);
   }
 
@@ -39,7 +39,7 @@ async function testReplicateIntegration() {
 
     // Test with a simple emoji generation
     const testPrompt = 'happy cat';
-    const enhancedPrompt = `Create a 3D-style Fluent emoji of ${testPrompt}. The emoji should have a modern, minimalist design with clean lines, subtle shadows, and a professional appearance. Use a white or transparent background. Make it suitable for digital communication platforms.`;
+    const enhancedPrompt = `${testPrompt}, 3D emoji, three dimensional, volumetric lighting, depth of field, shadows, highlights, glossy surface, metallic sheen, cute character, colorful, high detail, digital art, rendered in 3D, volumetric, dimensional, 3D model, isometric perspective, professional 3D render, ray tracing, subsurface scattering`;
 
     console.log(`🎨 Testing emoji generation with prompt: "${testPrompt}"`);
 
@@ -47,12 +47,7 @@ async function testReplicateIntegration() {
       version: REPLICATE_MODEL_VERSION,
       input: {
         prompt: enhancedPrompt,
-        negative_prompt: "blurry, low quality, distorted, ugly, poorly drawn, cartoon, anime, sketch, painting, watercolor, realistic, photorealistic, 3d render, sculpture, statue",
-        width: 768,
-        height: 768,
-        num_inference_steps: 20,
-        guidance_scale: 7.5,
-        scheduler: "DPMSolverMultistep",
+        negative_prompt: "flat, 2D, cartoon, sketch, drawing, illustration, painting, low poly, voxel, pixel art, ugly, deformed, blurry, low quality, text, watermark, signature",
       },
     });
 
