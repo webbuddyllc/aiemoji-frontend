@@ -40,7 +40,7 @@ export default function RootLayout({
         <link rel="icon" href="/emojify-logo.svg" type="image/svg+xml" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0A0A0A] text-white min-h-screen`}
       >
         <AuthProvider>
           <UserProvider>

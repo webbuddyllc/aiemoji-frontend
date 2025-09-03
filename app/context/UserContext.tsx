@@ -2,11 +2,29 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+interface Subscription {
+  planType: 'FREE' | 'PREMIUM';
+  billingFrequency: 'monthly' | 'annual';
+  status: 'active' | 'inactive' | 'cancelled' | 'past_due';
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
+  stripePriceId?: string;
+  currentPeriodStart?: Date;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
+  usageCount?: number;
+  usageLimit?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
+  bio?: string;
+  subscription?: Subscription;
 }
 
 interface UserContextType {

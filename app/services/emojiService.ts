@@ -1,6 +1,13 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-const REPLICATE_API_URL = 'https://api.replicate.com/v1/predictions';
-const REPLICATE_MODEL_VERSION = '5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa';
+import Replicate from 'replicate';
+
+// Environment variables - NEXT_PUBLIC_ prefix for client-side access
+const REPLICATE_API_TOKEN = process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN;
+const REPLICATE_MODEL_VERSION = process.env.NEXT_PUBLIC_REPLICATE_MODEL_VERSION || '5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa';
+
+// Initialize Replicate client
+const replicate = new Replicate({
+  auth: REPLICATE_API_TOKEN,
+});
 
 export interface EmojiStyle {
   background: string;
@@ -18,6 +25,9 @@ export interface EmojiMetadata {
   dimensions: string;
   model: string;
   date: string;
+  replicatePredictionId?: string;
+  requestId?: string;
+  processedAt?: string;
 }
 
 export interface EmojiResponse {
@@ -30,6 +40,7 @@ export interface EmojiResponse {
   metadata?: {
     requestId: string;
     processedAt: string;
+    replicatePredictionId?: string;
   };
   clientMetadata?: {
     clientRequestId: string;
@@ -59,7 +70,7 @@ class EmojiGenerationError extends Error {
 
 export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
   const clientRequestId = Math.random().toString(36).substring(7);
-  console.log(`[${clientRequestId}] Starting emoji generation request`);
+  console.log(`[${clientRequestId}] Starting emoji generation request with Replicate API`);
 
   try {
     // Input validation
@@ -91,125 +102,70 @@ export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
       };
     }
 
-    console.log(`[${clientRequestId}] Processing text prompt:`, text);
-
-    // Call the backend API to generate emojis with Replicate
-    console.log(`[${clientRequestId}] Calling backend API for Replicate emoji generation:`, `${API_URL}/emoji/generate`);
-    
-    // Log the request we're about to make
-    console.log(`[${clientRequestId}] Request details:`, {
-      url: `${API_URL}/emoji/generate`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Client-Request-ID': clientRequestId,
-      },
-      body: { text },
-      mode: 'cors'
-    });
-    
-    const startTime = Date.now();
-    
-    const response = await fetch(`${API_URL}/emoji/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Client-Request-ID': clientRequestId,
-      },
-      body: JSON.stringify({ text }),
-      credentials: 'include',
-      mode: 'cors'
-    });
-
-    const responseTime = Date.now() - startTime;
-    console.log(`[${clientRequestId}] Backend API response time:`, responseTime + 'ms');
-    console.log(`[${clientRequestId}] Backend API response status:`, response.status);
-    console.log(`[${clientRequestId}] Backend API response headers:`, Object.fromEntries([...response.headers.entries()]));
-
-    // Process the response
-    if (!response.ok) {
-      try {
-        const errorData = await response.json();
-        console.error(`[${clientRequestId}] Backend API error response:`, errorData);
-        
-        return {
-          success: false,
-          error: errorData.error || `HTTP error! status: ${response.status}`,
-          errorType: errorData.errorType || 'API_ERROR',
-          details: {
-            status: response.status,
-            statusText: response.statusText,
-            ...errorData.details
-          },
-          metadata: {
-            ...errorData.metadata,
-            requestId: clientRequestId,
-            processedAt: new Date().toISOString()
-          }
-        };
-      } catch (parseError) {
-        // If we can't parse the error, return a generic error
-        console.error(`[${clientRequestId}] Error parsing error response:`, parseError);
-        
-        return {
-          success: false,
-          error: `Backend error: ${response.status} ${response.statusText}`,
-          errorType: 'API_ERROR',
-          details: {
-            status: response.status,
-            statusText: response.statusText
-          },
-          metadata: {
-            requestId: clientRequestId,
-            processedAt: new Date().toISOString()
-          }
-        };
-      }
-    }
-
-    // Parse successful response
-    try {
-      const data = await response.json();
-      console.log(`[${clientRequestId}] Backend API successful response:`, {
-        success: data.success,
-        emoji: data.emoji,
-        metadata: data.metadata,
-      });
-
-      if (!data.success || !data.emoji) {
-        return {
-          success: false,
-          error: data.error || 'No emoji was generated',
-          errorType: data.errorType || 'PROCESSING_ERROR',
-          details: data.details || {},
-          metadata: {
-            ...data.metadata,
-            requestId: clientRequestId,
-            processedAt: new Date().toISOString()
-          }
-        };
-      }
-
-      // Return the successful response
-      return {
-        ...data,
-        clientMetadata: {
-          clientRequestId,
-          responseTime,
-        }
-      };
-    } catch (jsonError) {
-      console.error(`[${clientRequestId}] Error parsing JSON response:`, jsonError);
-      
+    // Check if Replicate API token is configured
+    if (!REPLICATE_API_TOKEN) {
+      console.error(`[${clientRequestId}] Replicate API token not configured`);
       return {
         success: false,
-        error: 'Failed to parse backend response',
-        errorType: 'PARSING_ERROR',
+        error: 'Replicate API token is not configured. Please set REPLICATE_API_TOKEN in your environment variables.',
+        errorType: 'CONFIGURATION_ERROR',
+        details: { missingConfig: 'REPLICATE_API_TOKEN' },
+        metadata: {
+          requestId: clientRequestId,
+          processedAt: new Date().toISOString()
+        }
+      };
+    }
+
+    console.log(`[${clientRequestId}] Processing text prompt:`, text);
+
+    const startTime = Date.now();
+
+    // Enhanced prompt for 3D-style Fluent Emojis
+    const enhancedPrompt = `Create a 3D-style Fluent emoji of ${text}. The emoji should have a modern, minimalist design with clean lines, subtle shadows, and a professional appearance. Use a white or transparent background. Make it suitable for digital communication platforms.`;
+
+    console.log(`[${clientRequestId}] Enhanced prompt for Replicate:`, enhancedPrompt);
+
+    // Call Replicate API directly
+    console.log(`[${clientRequestId}] Calling Replicate API with model:`, REPLICATE_MODEL_VERSION);
+
+    const prediction = await replicate.predictions.create({
+      version: REPLICATE_MODEL_VERSION,
+      input: {
+        prompt: enhancedPrompt,
+        negative_prompt: "blurry, low quality, distorted, ugly, poorly drawn, cartoon, anime, sketch, painting, watercolor, realistic, photorealistic, 3d render, sculpture, statue",
+        width: 768,
+        height: 768,
+        num_inference_steps: 20,
+        guidance_scale: 7.5,
+        scheduler: "DPMSolverMultistep",
+      },
+    });
+
+    console.log(`[${clientRequestId}] Replicate prediction created:`, prediction.id);
+
+    // Wait for the prediction to complete
+    let finalPrediction = prediction;
+    while (finalPrediction.status !== 'succeeded' && finalPrediction.status !== 'failed') {
+      console.log(`[${clientRequestId}] Prediction status:`, finalPrediction.status);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      finalPrediction = await replicate.predictions.get(prediction.id);
+    }
+
+    const responseTime = Date.now() - startTime;
+    console.log(`[${clientRequestId}] Replicate API response time:`, responseTime + 'ms');
+    console.log(`[${clientRequestId}] Final prediction status:`, finalPrediction.status);
+
+    if (finalPrediction.status === 'failed') {
+      console.error(`[${clientRequestId}] Replicate prediction failed:`, finalPrediction.error);
+      return {
+        success: false,
+        error: 'Failed to generate emoji: ' + (finalPrediction.error || 'Unknown error'),
+        errorType: 'GENERATION_FAILED',
         details: {
-          message: jsonError instanceof Error ? jsonError.message : 'Unknown error',
-          originalError: jsonError
+          replicateError: finalPrediction.error,
+          predictionId: prediction.id
         },
         metadata: {
           requestId: clientRequestId,
@@ -217,16 +173,73 @@ export const generateEmoji = async (text: string): Promise<EmojiResponse> => {
         }
       };
     }
+
+    if (!finalPrediction.output || !Array.isArray(finalPrediction.output) || finalPrediction.output.length === 0) {
+      console.error(`[${clientRequestId}] No output received from Replicate`);
+      return {
+        success: false,
+        error: 'No emoji image was generated',
+        errorType: 'NO_OUTPUT',
+        details: {
+          predictionId: prediction.id,
+          output: finalPrediction.output
+        },
+        metadata: {
+          requestId: clientRequestId,
+          processedAt: new Date().toISOString()
+        }
+      };
+    }
+
+    // Get the generated image URL
+    const imageUrl = finalPrediction.output[0];
+    console.log(`[${clientRequestId}] Generated image URL:`, imageUrl);
+
+    // Create metadata for the generated emoji
+    const metadata: EmojiMetadata = {
+      prompt: text,
+      dimensions: '768x768',
+      model: 'Replicate 3D-Style Fluent Emoji',
+      date: new Date().toISOString(),
+    };
+
+    const emoji: StyledEmoji = {
+      emoji: imageUrl,
+      isImage: true,
+      metadata: metadata,
+    };
+
+    console.log(`[${clientRequestId}] Successfully generated emoji:`, {
+      url: imageUrl,
+      metadata: metadata
+    });
+
+    return {
+      success: true,
+      emoji: emoji,
+      prompt: text,
+      metadata: {
+        requestId: clientRequestId,
+        processedAt: new Date().toISOString(),
+        replicatePredictionId: prediction.id,
+      },
+      clientMetadata: {
+        clientRequestId,
+        responseTime,
+      }
+    };
+
   } catch (error) {
-    console.error(`[${clientRequestId}] Unexpected error:`, error);
-    
+    console.error(`[${clientRequestId}] Unexpected error in Replicate integration:`, error);
+
     return {
       success: false,
-      error: 'An unexpected error occurred',
-      errorType: 'UNKNOWN_ERROR',
+      error: error instanceof Error ? error.message : 'An unexpected error occurred during emoji generation',
+      errorType: 'REPLICATE_ERROR',
       details: {
         message: error instanceof Error ? error.message : 'Unknown error occurred',
         stack: error instanceof Error ? error.stack : undefined,
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
       },
       metadata: {
         requestId: clientRequestId,

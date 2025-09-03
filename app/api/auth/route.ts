@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/app/lib/mongodb';
+import clientPromise from '../../lib/mongodb';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
@@ -58,10 +58,45 @@ export async function POST(req: Request) {
         );
       }
 
+      // Check if user has subscription data, if not, add default subscription
+      if (!user.subscription) {
+        await users.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              subscription: {
+                planType: 'FREE',
+                billingFrequency: 'monthly',
+                status: 'active',
+                usageCount: 0,
+                usageLimit: 5,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            }
+          }
+        );
+        user.subscription = {
+          planType: 'FREE',
+          billingFrequency: 'monthly',
+          status: 'active',
+          usageCount: 0,
+          usageLimit: 5,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+      }
+
       // Don't send password back to client
       const { password: _, ...userWithoutPassword } = user;
-      
-      return NextResponse.json(userWithoutPassword);
+
+      // Include MongoDB _id as id field and subscription data
+      const userResponse = {
+        ...userWithoutPassword,
+        id: user._id.toString()
+      };
+
+      return NextResponse.json(userResponse);
     } else {
       // Register logic
       if (!name) {
@@ -81,21 +116,36 @@ export async function POST(req: Request) {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      
+
       const newUser = {
         name,
         email,
         password: hashedPassword,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        createdAt: new Date()
+        createdAt: new Date(),
+        subscription: {
+          planType: 'FREE',
+          billingFrequency: 'monthly',
+          status: 'active',
+          usageCount: 0,
+          usageLimit: 5,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       };
 
-      await users.insertOne(newUser);
+      const result = await users.insertOne(newUser);
 
       // Don't send password back to client
       const { password: _, ...userWithoutPassword } = newUser;
-      
-      return NextResponse.json(userWithoutPassword);
+
+      // Include MongoDB _id as id field
+      const userResponse = {
+        ...userWithoutPassword,
+        id: result.insertedId.toString()
+      };
+
+      return NextResponse.json(userResponse);
     }
   } catch (error) {
     console.error('Authentication error:', error);

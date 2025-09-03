@@ -77,7 +77,7 @@ export default function LoginModal({ isOpen, onClose, onSwitch, onSuccess }: Log
                 type="email"
                 id="email"
                 {...register('email')}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
                 disabled={isLoading}
               />
               {errors.email && (
@@ -93,7 +93,7 @@ export default function LoginModal({ isOpen, onClose, onSwitch, onSuccess }: Log
                 type="password"
                 id="password"
                 {...register('password')}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
                 disabled={isLoading}
               />
               {errors.password && (
@@ -104,7 +104,7 @@ export default function LoginModal({ isOpen, onClose, onSwitch, onSuccess }: Log
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              className="w-full rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {isLoading ? 'Loading...' : 'Login'}
             </button>
@@ -114,7 +114,7 @@ export default function LoginModal({ isOpen, onClose, onSwitch, onSuccess }: Log
             Don't have an account?{' '}
             <button
               onClick={onSwitch}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="text-gray-600 hover:text-gray-700 font-medium"
             >
               Register
             </button>

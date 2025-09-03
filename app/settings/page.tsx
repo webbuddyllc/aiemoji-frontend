@@ -135,7 +135,7 @@ const SettingsPage = () => {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-200">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-100 to-gray-200">
             Account Settings
           </h1>
           <p className="text-gray-400 mt-2">
@@ -144,7 +144,7 @@ const SettingsPage = () => {
         </div>
 
         {/* Settings Form */}
-        <div className="bg-black/50 border border-blue-500/20 rounded-2xl p-6 backdrop-blur-xl">
+        <div className="bg-black/50 border border-gray-500/20 rounded-2xl p-6 backdrop-blur-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Profile Section */}
             <div className="space-y-4">
@@ -159,7 +159,7 @@ const SettingsPage = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
+                  className="w-full px-4 py-3 bg-black/50 border border-gray-500/20 rounded-lg focus:outline-none focus:border-gray-500/50 text-white placeholder-gray-500 transition-colors"
                   placeholder="Your name"
                 />
               </div>
@@ -173,14 +173,14 @@ const SettingsPage = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
+                  className="w-full px-4 py-3 bg-black/50 border border-gray-500/20 rounded-lg focus:outline-none focus:border-gray-500/50 text-white placeholder-gray-500 transition-colors"
                   placeholder="Your email"
                 />
               </div>
             </div>
 
             {/* Password Section */}
-            <div className="space-y-4 pt-6 border-t border-blue-500/20">
+            <div className="space-y-4 pt-6 border-t border-gray-500/20">
               <h2 className="text-xl font-semibold text-white">Change Password</h2>
               
               <div>
@@ -192,7 +192,7 @@ const SettingsPage = () => {
                   name="currentPassword"
                   value={formData.currentPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
+                  className="w-full px-4 py-3 bg-black/50 border border-gray-500/20 rounded-lg focus:outline-none focus:border-gray-500/50 text-white placeholder-gray-500 transition-colors"
                   placeholder="Enter current password"
                 />
               </div>
@@ -206,7 +206,7 @@ const SettingsPage = () => {
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
+                  className="w-full px-4 py-3 bg-black/50 border border-gray-500/20 rounded-lg focus:outline-none focus:border-gray-500/50 text-white placeholder-gray-500 transition-colors"
                   placeholder="Enter new password"
                 />
               </div>
@@ -220,7 +220,7 @@ const SettingsPage = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-black/50 border border-blue-500/20 rounded-lg focus:outline-none focus:border-blue-500/50 text-white placeholder-gray-500 transition-colors"
+                  className="w-full px-4 py-3 bg-black/50 border border-gray-500/20 rounded-lg focus:outline-none focus:border-gray-500/50 text-white placeholder-gray-500 transition-colors"
                   placeholder="Confirm new password"
                 />
               </div>
@@ -231,14 +231,14 @@ const SettingsPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 
-                hover:from-blue-600 hover:via-blue-500 hover:to-cyan-500
+                className="w-full py-3 px-4 bg-gradient-to-r from-gray-500 via-gray-400 to-gray-600 
+                hover:from-gray-600 hover:via-gray-500 hover:to-gray-700
                 text-white font-medium rounded-lg transition-all duration-300 
-                shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 
+                shadow-lg shadow-gray-500/20 hover:shadow-xl hover:shadow-gray-500/30 
                 transform hover:-translate-y-0.5 relative group overflow-hidden 
                 disabled:opacity-50"
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300 animate-pulse"></span>
+                <span className="absolute inset-0 bg-gradient-to-r from-gray-500 via-gray-400 to-gray-600 opacity-0 group-hover:opacity-50 transition-opacity duration-300 animate-pulse"></span>
                 <span className="relative">
                   {loading ? 'Saving...' : 'Save Changes'}
                 </span>
