@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Emojify - AI Emoji Generator",
+  title: "AIemoji - AI Emoji Generator",
   description: "Generate custom emojis with the power of AI",
   icons: {
     icon: [

@@ -101,7 +101,7 @@ const Navbar: React.FC = () => {
                 </div>
               </div>
               <span className="text-white font-bold text-xl tracking-tight group-hover:text-gray-300 transition-colors duration-200">
-                Emojify
+                AIemoji
               </span>
             </Link>
 
