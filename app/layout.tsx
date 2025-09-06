@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import { UserProvider } from './context/UserContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
@@ -40,14 +41,15 @@ export default function RootLayout({
         <link rel="icon" href="/emojify-logo.svg" type="image/svg+xml" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0A0A0A] text-white min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#111825] text-white min-h-screen flex flex-col`}
       >
         <AuthProvider>
           <UserProvider>
             <Navbar />
-            <main className="pt-16">
+            <main className="pt-0 flex-1">
               {children}
             </main>
+            <Footer />
           </UserProvider>
           <Toaster position="top-center" />
         </AuthProvider>

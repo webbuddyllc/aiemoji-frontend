@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import clientPromise from '../../lib/mongodb';
 import bcrypt from 'bcryptjs';
 
@@ -96,7 +97,16 @@ export async function POST(req: Request) {
         id: user._id.toString()
       };
 
-      return NextResponse.json(userResponse);
+      // Set session cookie via response
+      const res = NextResponse.json(userResponse);
+      res.cookies.set('session_user', user._id.toString(), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+      return res;
     } else {
       // Register logic
       if (!name) {
@@ -145,7 +155,16 @@ export async function POST(req: Request) {
         id: result.insertedId.toString()
       };
 
-      return NextResponse.json(userResponse);
+      // Set session cookie via response
+      const res = NextResponse.json(userResponse);
+      res.cookies.set('session_user', result.insertedId.toString(), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+      return res;
     }
   } catch (error) {
     console.error('Authentication error:', error);

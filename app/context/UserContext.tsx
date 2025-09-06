@@ -40,16 +40,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check local storage for existing user session
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Fetch current session user from secure cookie
+    const fetchMe = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (res.ok) {
+          const me = await res.json();
+          setUser(me);
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        setUser(null);
+      }
+    };
+    fetchMe();
   }, []);
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      setUser(null);
+    }
   };
 
   return (

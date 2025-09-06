@@ -107,26 +107,16 @@ export const usePricingValidation = () => {
     }
 
     try {
-      const response = await fetch('/api/usage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      });
-
-      if (response.status === 429) {
-        // Usage limit reached
-        const data = await response.json();
-        setUsageData(data);
+      // Use GET to check current usage without incrementing.
+      const response = await fetch(`/api/usage?userId=${user.id}`);
+      if (!response.ok) {
         return false;
       }
-
-      if (response.ok) {
-        const data = await response.json();
-        setUsageData(data);
-        return true;
-      }
-
-      return false;
+      const data: UsageData = await response.json();
+      setUsageData(data);
+      const isPremium = data.planType === 'PREMIUM';
+      const isLimitReached = !isPremium && data.usageCount >= data.usageLimit;
+      return !isLimitReached;
     } catch (err) {
       console.error('Usage check error:', err);
       return false;

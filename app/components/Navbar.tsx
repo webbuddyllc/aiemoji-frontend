@@ -58,7 +58,7 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="sticky top-0 left-0 right-0 z-50 bg-[#0A0A0A] shadow-lg">
+      <nav className="sticky top-0 left-0 right-0 z-50 bg-[#0A0A0A]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -112,12 +112,6 @@ const Navbar: React.FC = () => {
                 className={`text-gray-400 font-medium px-3 py-2 rounded-md text-sm transition-colors duration-200 border-b-2 ${pathname === '/' ? 'border-gray-300' : 'border-transparent'}`}
               >
                 Home
-              </Link>
-              <Link
-                href="/search"
-                className={`text-gray-300 hover:text-white font-medium px-3 py-2 rounded-md text-sm transition-colors duration-200 hover:border-b-2 hover:border-gray-300 ${pathname === '/search' ? 'border-gray-300' : 'border-transparent'}`}
-              >
-                Search
               </Link>
               <Link
                 href="/pricing"
@@ -264,13 +258,6 @@ const Navbar: React.FC = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Home
-              </Link>
-              <Link
-                href="/search"
-                className={`text-gray-300 hover:text-white font-medium block px-3 py-2 rounded-md text-base transition-colors duration-200 ${pathname === '/search' ? 'border-gray-300' : 'border-transparent'}`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Search
               </Link>
               <Link
                 href="/pricing"

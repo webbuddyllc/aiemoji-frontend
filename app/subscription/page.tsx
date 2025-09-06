@@ -95,7 +95,6 @@ const SubscriptionPage = () => {
           console.log('User data refreshed:', userData);
 
           setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
 
           // Refresh usage data as well
           setTimeout(() => refreshUsage(), 500);
