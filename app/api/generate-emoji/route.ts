@@ -5,7 +5,11 @@ import clientPromise from '../../lib/mongodb';
 
 // Environment variables - server-side access
 const REPLICATE_API_TOKEN = process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN;
-const REPLICATE_MODEL_VERSION = process.env.NEXT_PUBLIC_REPLICATE_MODEL_VERSION || 'stability-ai/stable-diffusion:db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf';
+const REPLICATE_MODEL_ID = "fofr/sdxl-emoji";
+const REPLICATE_MODEL_VERSION = "dee76b5afde21b0f01ed7925f0665b7e879c50ee718c5f78a9d38e04d523cc5e";
+
+// Emoji prefixes to add to user prompts
+const EMOJI_PREFIXES = ['✨', '🎨', '🌟', '💫', '🔮', '🎭', '🎪', '🎯', '🎮', '🎲'];
 
 // Initialize Replicate client
 const replicate = new Replicate({
@@ -190,46 +194,49 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Enhanced 3D emoji generation - professional 3D rendering style
-    const enhancedPrompt = `${prompt}, 3D emoji, three dimensional, volumetric lighting, depth of field, shadows, highlights, glossy surface, metallic sheen, cute character, colorful, high detail, digital art, rendered in 3D, volumetric, dimensional, 3D model, isometric perspective, professional 3D render, ray tracing, subsurface scattering`;
+    // Enhanced emoji generation with SDXL emoji model
+    const randomEmojiPrefix = EMOJI_PREFIXES[Math.floor(Math.random() * EMOJI_PREFIXES.length)];
+    const enhancedPrompt = `A TOK emoji of ${prompt}`;
 
     console.log(`[${clientRequestId}] Enhanced prompt for Replicate:`, enhancedPrompt);
 
-    // Call Replicate API directly
-    console.log(`[${clientRequestId}] Calling Replicate API with model:`, REPLICATE_MODEL_VERSION);
+    // Call Replicate API directly using replicate.run
+    console.log(`[${clientRequestId}] Calling Replicate API with model: ${REPLICATE_MODEL_ID}`);
+    console.log(`[${clientRequestId}] Full model string: ${REPLICATE_MODEL_ID}:${REPLICATE_MODEL_VERSION}`);
+    console.log(`[${clientRequestId}] Enhanced prompt:`, enhancedPrompt);
 
-    const prediction = await replicate.predictions.create({
-      version: REPLICATE_MODEL_VERSION,
-      input: {
-        prompt: enhancedPrompt,
-        negative_prompt: "flat, 2D, cartoon, sketch, drawing, illustration, painting, low poly, voxel, pixel art, ugly, deformed, blurry, low quality, text, watermark, signature",
-      },
-    });
-
-    console.log(`[${clientRequestId}] Replicate prediction created:`, prediction.id);
-
-    // Wait for the prediction to complete
-    let finalPrediction = prediction;
-    while (finalPrediction.status !== 'succeeded' && finalPrediction.status !== 'failed') {
-      console.log(`[${clientRequestId}] Prediction status:`, finalPrediction.status);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      finalPrediction = await replicate.predictions.get(prediction.id);
-    }
-
-    const responseTime = Date.now() - startTime;
-    console.log(`[${clientRequestId}] Replicate API response time:`, responseTime + 'ms');
-    console.log(`[${clientRequestId}] Final prediction status:`, finalPrediction.status);
-
-    if (finalPrediction.status === 'failed') {
-      console.error(`[${clientRequestId}] Replicate prediction failed:`, finalPrediction.error);
+    let output;
+    try {
+      output = await replicate.run(
+        `${REPLICATE_MODEL_ID}:${REPLICATE_MODEL_VERSION}`,
+        {
+          input: {
+            width: 1024,
+            height: 1024,
+            prompt: enhancedPrompt,
+            refine: "no_refiner",
+            scheduler: "K_EULER",
+            lora_scale: 0.6,
+            num_outputs: 1,
+            guidance_scale: 7.5,
+            apply_watermark: false,
+            high_noise_frac: 0.8,
+            negative_prompt: "bad quality, low resolution, blurry, pixelated",
+            prompt_strength: 0.8,
+            num_inference_steps: 50
+          }
+        }
+      );
+      console.log(`[${clientRequestId}] Replicate.run() completed successfully`);
+    } catch (replicateError) {
+      console.error(`[${clientRequestId}] Replicate.run() failed:`, replicateError);
       return NextResponse.json({
         success: false,
-        error: 'Failed to generate emoji: ' + (finalPrediction.error || 'Unknown error'),
-        errorType: 'GENERATION_FAILED',
+        error: 'Replicate API call failed: ' + (replicateError instanceof Error ? replicateError.message : 'Unknown error'),
+        errorType: 'REPLICATE_API_ERROR',
         details: {
-          replicateError: finalPrediction.error,
-          predictionId: prediction.id
+          replicateError: replicateError instanceof Error ? replicateError.message : replicateError,
+          model: `${REPLICATE_MODEL_ID}:${REPLICATE_MODEL_VERSION}`
         },
         metadata: {
           requestId: clientRequestId,
@@ -238,15 +245,19 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    if (!finalPrediction.output || !Array.isArray(finalPrediction.output) || finalPrediction.output.length === 0) {
+    const responseTime = Date.now() - startTime;
+    console.log(`[${clientRequestId}] Replicate API response time:`, responseTime + 'ms');
+    console.log(`[${clientRequestId}] Replicate output:`, output);
+
+    // The output should be an array with image URL(s)
+    if (!Array.isArray(output) || output.length === 0) {
       console.error(`[${clientRequestId}] No output received from Replicate`);
       return NextResponse.json({
         success: false,
         error: 'No emoji image was generated',
         errorType: 'NO_OUTPUT',
         details: {
-          predictionId: prediction.id,
-          output: finalPrediction.output
+          output: output
         },
         metadata: {
           requestId: clientRequestId,
@@ -256,15 +267,89 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the generated image URL
-    const imageUrl = finalPrediction.output[0];
-    console.log(`[${clientRequestId}] Generated image URL:`, imageUrl);
+    console.log(`[${clientRequestId}] Raw output from Replicate:`, JSON.stringify(output, null, 2));
+    
+    // Handle different output formats from SDXL model
+    let imageUrl: string;
+    if (Array.isArray(output) && output.length > 0) {
+      // Check if output[0] is a string URL or an object with url() method
+      if (typeof output[0] === 'string') {
+        imageUrl = output[0];
+      } else if (output[0] && typeof output[0] === 'object') {
+        // Try different ways to get the URL
+        if (typeof output[0].url === 'function') {
+          // Call url() as a function (based on your example)
+          imageUrl = output[0].url();
+        } else if (typeof output[0].url === 'string') {
+          // Access url as a property
+          imageUrl = output[0].url;
+        } else if (output[0].toString && typeof output[0].toString === 'function') {
+          // Try toString method
+          imageUrl = output[0].toString();
+        } else {
+          console.error(`[${clientRequestId}] Unexpected output format:`, output[0]);
+          console.error(`[${clientRequestId}] Available properties:`, Object.keys(output[0]));
+          return NextResponse.json({
+            success: false,
+            error: 'Unexpected output format from Replicate',
+            errorType: 'OUTPUT_FORMAT_ERROR',
+            details: {
+              output: output,
+              outputType: typeof output[0],
+              availableProperties: Object.keys(output[0] || {})
+            },
+            metadata: {
+              requestId: clientRequestId,
+              processedAt: new Date().toISOString()
+            }
+          }, { status: 500 });
+        }
+      } else {
+        console.error(`[${clientRequestId}] Output[0] is not an object or string:`, typeof output[0]);
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid output type from Replicate',
+          errorType: 'OUTPUT_TYPE_ERROR',
+          details: {
+            output: output,
+            outputType: typeof output[0]
+          },
+          metadata: {
+            requestId: clientRequestId,
+            processedAt: new Date().toISOString()
+          }
+        }, { status: 500 });
+      }
+    } else {
+      console.error(`[${clientRequestId}] No valid output received`);
+      return NextResponse.json({
+        success: false,
+        error: 'No valid output received from Replicate',
+        errorType: 'NO_OUTPUT',
+        details: {
+          output: output
+        },
+        metadata: {
+          requestId: clientRequestId,
+          processedAt: new Date().toISOString()
+        }
+      }, { status: 500 });
+    }
+    
+    console.log(`[${clientRequestId}] Extracted image URL:`, imageUrl);
 
     // Create metadata for the generated emoji
+    const generatedDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
     const metadata: EmojiMetadata = {
       prompt: prompt,
-      dimensions: '768x768',
-      model: 'Replicate 3D Emoji Generator',
-      date: new Date().toISOString(),
+      dimensions: '1024×1024',
+      model: 'Emoji',
+      date: generatedDate,
     };
 
     const emoji: StyledEmoji = {
@@ -272,6 +357,31 @@ export async function POST(request: NextRequest) {
       isImage: true,
       metadata: metadata,
     };
+
+    // Log the activity if user is authenticated
+    if (userId) {
+      try {
+        const client = await clientPromise;
+        const db = client.db('emojify');
+        const activities = db.collection('user_activities');
+        
+        await activities.insertOne({
+          userId: new ObjectId(userId),
+          type: 'emoji_created',
+          description: `Created new emoji: ${prompt}`,
+          metadata: {
+            emojiUrl: imageUrl,
+            prompt: prompt,
+            model: metadata.model,
+            dimensions: metadata.dimensions
+          },
+          timestamp: new Date()
+        });
+      } catch (activityError) {
+        console.error(`[${clientRequestId}] Failed to log activity:`, activityError);
+        // Don't fail the request if activity logging fails
+      }
+    }
 
     console.log(`[${clientRequestId}] Successfully generated emoji:`, {
       url: imageUrl,
@@ -285,7 +395,6 @@ export async function POST(request: NextRequest) {
       metadata: {
         requestId: clientRequestId,
         processedAt: new Date().toISOString(),
-        replicatePredictionId: prediction.id,
       },
       clientMetadata: {
         clientRequestId,
