@@ -71,6 +71,11 @@ export async function PUT(req: Request) {
 
     // Return updated user data
     const updatedUser = await users.findOne({ _id: new ObjectId(userId) });
+    
+    if (!updatedUser) {
+      return NextResponse.json({ error: 'User not found after update' }, { status: 404 });
+    }
+
     const { password: _, ...userWithoutPassword } = updatedUser as any;
 
     const userResponse = {
